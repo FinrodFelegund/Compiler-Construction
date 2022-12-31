@@ -2,14 +2,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "header.h"
+typedef struct ast_node ast_node;
+#include "parser.tab.h"
 int lineno = 1;
 char *str;
-void yyerror(const char *msg)
-{
-	fprintf(stderr, "%s",  msg);
-	printf("\n");
 
-}
 
 typedef struct string
 {
@@ -76,7 +74,7 @@ void del()
 
 }
 
-void print(char *msg)
+void printMessage(char *msg)
 {
 	
 	
@@ -112,41 +110,44 @@ REAL "0"|[0-9]+"."[0-9]+
 
 "\""     { if(st == NULL) st = init(5); 
 	   BEGIN(String);}
-<String>"\"" { print(st->str); del(); st = NULL;
-	       BEGIN(INITIAL); }
+<String>"\"" { yylval.STR = malloc(st->used), strcpy(yylval.STR, st->str); del(); st = NULL;
+	       BEGIN(INITIAL); return _str; }
 <String>"\\x" { insert("\""); }
 <String>"\\nl" { insert("\n"); lineno++; }
 <String>[^\"\\x\\n]*   { insert(yytext); }
 
-"func"    { ; }
-"if"      { ; }
-"else"    { ; }
-"while"   { ; }
-"+"       { ; }
-"-"       { ; }
-"*"       { ; }
-"/"       { ; }
-"++"      { ; }
-"--"      { ; }
-"print"   { ; }
+"func"    { return _FUNC; }
+"if"      { return _IF; }
+"else"    { return _ELSE; }
+"while"   { return _WHILE; }
+"+"       { return PLUOP; }
+"-"       { return MINOP; }
+"*"       { return MULOP; }
+"/"       { return DIVOP; }
+"++"      { return INCR; }
+"--"      { return DECR; }
+"print"   { return _PRINT; }
 
-"("       { ; }
-")"       { ; }
-"["       { ; }
-"]"       { ; }
-"{"       { ; }
-"}"       { ; }
-";"       { ; }
-"="       { ; }
+"("       { return LPAREN; }
+")"       { return RPAREN; }
+"["       { return LBRAC; }
+"]"       { return RBRAC; }
+"{"       { return LCURLI; }
+"}"       { return RCURLI; }
+";"       { return SEMI; }
+"="       { return ASS; }
 
-{ID}      { printf("Found ID: %s\n", yytext); }
-{INT}     { printf("Found int: %d\n", atoi(yytext)); }
-{REAL}    { printf("Found real: %f\n", atof(yytext)); }
+"getInt"  { return _GETINT; }
+"getReal" { return _GETREAL; }
+
+{ID}      { yylval.STR = malloc(yyleng); strcpy(yylval.STR, yytext); return _id; }
+{INT}     { yylval.INT = atoi(yytext); return _int; }
+{REAL}    { yylval.FLOAT = atof(yytext); return _real; }
 
 
 "\n"      { lineno++; }
 [ \t\r\f]+ { ; }	
-.       { yyerror("Unrecognized character"); }
+.       { fprintf(stderr, "%s\n", "Unrecognized character"); }
 
 %%
 
@@ -155,9 +156,3 @@ int yywrap(void)
 	return 1;
 }
 
-int main(void)
-{
-	yylex();
-	return 0;
-
-}

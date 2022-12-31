@@ -1,0 +1,19 @@
+func test()
+{
+
+	print(1.36);
+
+}
+
+
+
+func main()
+{
+
+	a = 5;
+
+	b = a + 3;
+
+	print(a);
+	print(b);
+}
