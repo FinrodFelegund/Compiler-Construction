@@ -6,14 +6,16 @@ func test()
 }
 
 
-
 func main()
 {
 
 	a = 5;
-
-	b = a + 3;
-
+	b = a +a ;
+	print(1);
+	print("Hello World");
+	c = "Hello World from Variable";
+	print(c);
 	print(a);
 	print(b);
+	
 }

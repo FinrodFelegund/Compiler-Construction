@@ -1,5 +1,5 @@
 %{
-#include "header.c"
+#include "ast.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,24 +10,12 @@ extern FILE *yyin;
 
 void yyerror(char *msg)
 {
-	fprintf(stderr, "%s\n", msg);
+	fprintf(stderr, "Error type: %s in line %d\n", msg, lineno);
+	exit(1);
 }
 
-int vars[256];
-void setvar(char *id, int nr)
-{
-	vars[(int)(*id)] = nr;
-
-}
-
-int getvar(char *id)
-{
-	int var = vars[(int)*id];
-	return var;
-}
 ast_node *mainFunction = NULL;
-ast_node *functions[10];
-int functionIndex = 10;
+
 %}
 
 %union
@@ -66,11 +54,11 @@ int functionIndex = 10;
        <op> RCURLI
        <op> _GETINT
        <op> _GETREAL
+       <op> _NL
 
 %type  <ast> EXPRESSION FUNCTIONS FUNCTION EXPRESSIONS
 
-%right ASS
-%right _PRINT
+%right ASS _PRINT
 %left PLUOP MINOP
 %left MULOP DIVOP
 
@@ -79,10 +67,11 @@ int functionIndex = 10;
 
 %%
 
-START: FUNCTIONS { $1->funcName = "begin"; print($1); }
+START: FUNCTIONS { $1->funcName = "begin"; print($1); execute(mainFunction); }
 
 FUNCTIONS: FUNCTIONS FUNCTION { $$ = new_node(FUNCS); $$->childNodes[0] = $1; $$->childNodes[1] = $2; } 
-         | FUNCTION           { $$ = $1; } 
+           | FUNCTION           { $$ = $1; }
+	   
 
 FUNCTION: _FUNC _id LPAREN RPAREN LCURLI EXPRESSIONS RCURLI { $$ = new_node(FUNC); $$->childNodes[0] = $6; $$->funcName = $2;
 							      if((strcmp($2, "main") == 0) && mainFunction == NULL){ mainFunction = $$; }   
@@ -90,18 +79,18 @@ FUNCTION: _FUNC _id LPAREN RPAREN LCURLI EXPRESSIONS RCURLI { $$ = new_node(FUNC
 
 EXPRESSIONS: EXPRESSIONS EXPRESSION SEMI { $$ = new_node(EXPRESSIONS); $$->childNodes[0] = $1; $$->childNodes[1] = $2; } 
 		| EXPRESSION SEMI { $$ = new_node(EXPRESSIONS); $$->childNodes[0] = $1; }
-		| error SEMI { yyerrok; }
+		 
 
 EXPRESSION: EXPRESSION PLUOP EXPRESSION { $$ = new_node(PLUS); $$->childNodes[0] = $1; $$->childNodes[1] = $3; }
           | EXPRESSION MINOP EXPRESSION { $$ = new_node(MIN); $$->childNodes[0] = $1; $$->childNodes[1] = $3; }
 	  | EXPRESSION MULOP EXPRESSION { $$ = new_node(MUL); $$->childNodes[0] = $1; $$->childNodes[1] = $3; }
 	  | EXPRESSION DIVOP EXPRESSION { $$ = new_node(DIV); $$->childNodes[0] = $1; $$->childNodes[1] = $3; }
-	  | EXPRESSION ASS   EXPRESSION        { $$ = new_node(ASSIGN); $$->childNodes[0] = $1; $$->childNodes[1] = $3; }
+	  | EXPRESSION ASS   EXPRESSION        { $$ = new_node(ASSIGN); $$->childNodes[0] = $1; $$->childNodes[1] = $3; $1->val.dType = $3->val.dType; }
 	  | _PRINT LPAREN EXPRESSION RPAREN { $$ = new_node(PRINT); $$->childNodes[0] = $3; } 
-	  | _int                        { $$ = new_node(INT); $$->val.INR = $1; }
+	  | _int                        { $$ = new_node(INT); $$->val.INR = $1; $$->val.dType = typeInt; }
 	  | _id				{ $$ = new_node(ID); $$->val.ID = $1; }
-          | _real                       { $$ = new_node(REAL); $$->val.FNR = $1;}
-     
+          | _real                       { $$ = new_node(REAL); $$->val.FNR = $1; $$->val.dType = typeReal;}
+          | _str                        { $$ = new_node(STRING); $$->val.STR = $1; $$->val.dType = typeString; } 
 
 
 %%

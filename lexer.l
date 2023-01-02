@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "header.h"
+#include "ast.h"
 typedef struct ast_node ast_node;
 #include "parser.tab.h"
 int lineno = 1;

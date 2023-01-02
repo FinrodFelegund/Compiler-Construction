@@ -1,6 +1,12 @@
 # Prerequisites
 *.d
 
+#bison and lex files
+*.output
+*.tab.*
+*.yy.*
+
+
 # Object files
 *.o
 *.ko
@@ -35,6 +41,7 @@
 *.i*86
 *.x86_64
 *.hex
+exec
 
 # Debug files
 *.dSYM/
