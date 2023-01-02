@@ -76,7 +76,7 @@ void printTree(ast_node *root, Agraph_t *graph, Agnode_t *node)
 		case EXPRESSIONS: name = concatenateString("EXPRESSIONS", ""); break;
 		default: name = "Unknown Node";printf("Unknown node in printing\n"); return; 
 	}
-	printf("%s\n", name);
+
 	
 	char buffer[10];
 	sprintf(buffer, "%d", nodeCounter++);	
