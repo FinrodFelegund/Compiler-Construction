@@ -16,47 +16,64 @@ void yyerror(char *msg)
 
 ast_node *mainFunction = NULL;
 
+typedef struct 
+{
+	char *str;
+} string;
+
+typedef struct
+{
+
+	char *str;
+
+} identifier;
+
 %}
+
 
 %union
 {
 
 	ast_node *ast;
-	char *op;
-	int INT;
-	float FLOAT;
-	char *STR;	
+	int iconst;
+	float rconst;
+	char *sconst;
+	int data_type;
+		
 };
 
-%token <STR> _str
-       <INT> _int
-       <FLOAT> _real
-       <STR> _id
+%token <sconst> _str
+       <iconst> _int
+       <rconst> _real
+       <sconst> _id
 
-%token <op> SEMI
-       <op> PLUOP
-       <op> MINOP
-       <op> MULOP
-       <op> DIVOP
-       <op> ASS
-       <op> _FUNC
-       <op> _IF
-       <op> _ELSE
-       <op> _WHILE
-       <op> INCR
-       <op> DECR
-       <op> _PRINT
-       <op> LPAREN
-       <op> RPAREN
-       <op> LBRAC
-       <op> RBRAC
-       <op> LCURLI
-       <op> RCURLI
-       <op> _GETINT
-       <op> _GETREAL
-       <op> _NL
+%token  SEMI
+        PLUOP
+        MINOP
+        MULOP
+        DIVOP
+        ASS
+        _FUNC
+        _IF
+        _ELSE
+        _WHILE
+        INCR
+        DECR
+        _PRINT
+        LPAREN
+        RPAREN
+        LBRAC
+        RBRAC
+        LCURLI
+        RCURLI
+       _GETINT
+       _GETREAL
+       _INT
+       _REAL
+       _STRING
 
 %type  <ast> EXPRESSION FUNCTIONS FUNCTION EXPRESSIONS
+%type  <data_type> TYPE
 
 %right ASS _PRINT
 %left PLUOP MINOP
@@ -85,13 +102,17 @@ EXPRESSION: EXPRESSION PLUOP EXPRESSION { $$ = new_node(PLUS); $$->childNodes[0]
           | EXPRESSION MINOP EXPRESSION { $$ = new_node(MIN); $$->childNodes[0] = $1; $$->childNodes[1] = $3; }
 	  | EXPRESSION MULOP EXPRESSION { $$ = new_node(MUL); $$->childNodes[0] = $1; $$->childNodes[1] = $3; }
 	  | EXPRESSION DIVOP EXPRESSION { $$ = new_node(DIV); $$->childNodes[0] = $1; $$->childNodes[1] = $3; }
-	  | EXPRESSION ASS   EXPRESSION        { $$ = new_node(ASSIGN); $$->childNodes[0] = $1; $$->childNodes[1] = $3; $1->val.dType = $3->val.dType; }
+	  | EXPRESSION ASS   EXPRESSION        { $$ = new_node(ASSIGN); $$->childNodes[0] = $1; $$->childNodes[1] = $3; }
 	  | _PRINT LPAREN EXPRESSION RPAREN { $$ = new_node(PRINT); $$->childNodes[0] = $3; } 
-	  | _int                        { $$ = new_node(INT); $$->val.INR = $1; $$->val.dType = typeInt; }
-	  | _id				{ $$ = new_node(ID); $$->val.ID = $1; }
-          | _real                       { $$ = new_node(REAL); $$->val.FNR = $1; $$->val.dType = typeReal;}
-          | _str                        { $$ = new_node(STRING); $$->val.STR = $1; $$->val.dType = typeString; } 
-
+	  | TYPE _id                    { $$ = new_node(DECLARATION); $$->val.m_id = $2; $$->val.m_flag = $1; }
+	  | _int                        { $$ = new_node(INT); $$->val.m_int = $1; $$->val.m_flag = intType; }
+          | _real                       { $$ = new_node(REAL); $$->val.m_real = $1; $$->val.m_flag = realType; }
+          | _str                        { $$ = new_node(STRING); $$->val.m_string = $1; $$->val.m_flag = stringType; } 
+	  | _id                         { $$ = new_node(ID); $$->val.m_id = $1; } //gotta somehow find out about the variable type
+	  
+TYPE:       _INT                        { $$ = intType; } 
+	  | _STRING			{ $$ = stringType; }
+	  | _REAL			{ $$ = realType; }
 
 %%
 

@@ -9,13 +9,13 @@ func test()
 func main()
 {
 
-	a = 5;
-	b = a +a ;
+	int a = 5;
+	int b = a + a;
 	print(1);
-	print("Hello World");
-	c = "Hello World from Variable";
-	print(c);
 	print(a);
 	print(b);
+	
+	
+	
 	
 }

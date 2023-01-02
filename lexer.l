@@ -110,11 +110,15 @@ REAL "0"|[0-9]+"."[0-9]+
 
 "\""     { if(st == NULL) st = init(5); 
 	   BEGIN(String);}
-<String>"\"" { yylval.STR = malloc(st->used), strcpy(yylval.STR, st->str); del(); st = NULL;
+<String>"\"" { yylval.sconst = malloc(st->used), strcpy(yylval.sconst, st->str); del(); st = NULL;
 	       BEGIN(INITIAL); return _str; }
 <String>"\\x" { insert("\""); }
 <String>"\\nl" { insert("\n"); lineno++; }
 <String>[^\"\\x\\n]*   { insert(yytext); }
+
+"int"     { return _INT; }
+"real"    { return _REAL; }
+"string"  { return _STRING; }
 
 "func"    { return _FUNC; }
 "if"      { return _IF; }
@@ -140,9 +144,9 @@ REAL "0"|[0-9]+"."[0-9]+
 "getInt"  { return _GETINT; }
 "getReal" { return _GETREAL; }
 
-{ID}      { yylval.STR = malloc(yyleng); strcpy(yylval.STR, yytext); return _id; }
-{INT}     { yylval.INT = atoi(yytext); return _int; }
-{REAL}    { yylval.FLOAT = atof(yytext); return _real; }
+{ID}      { yylval.sconst = malloc(yyleng); strcpy(yylval.sconst, yytext); return _id; }
+{INT}     { yylval.iconst = atoi(yytext); return _int; }
+{REAL}    { yylval.rconst = atof(yytext); return _real; }
 
 
 "\n"      { lineno++; }

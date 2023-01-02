@@ -1,20 +1,7 @@
 #include "ast.h"
 
 int nodeCounter = 0;
-int scopeCounter = 0;
-void test()
-{
 
-value_t val;
-val.INR = 5;
-printf("%d\n", val.INR);
-
-}
-
-void test_astnode()
-{
-	
-}
 
 ast_node *new_node(int type)
 {
@@ -61,7 +48,7 @@ void printTree(ast_node *root, Agraph_t *graph, Agnode_t *node)
 	char *name;
 	switch(root->type)
 	{
-		case ID: name = concatenateString("ID", root->val.ID); break;
+		case ID: name = concatenateString("ID", root->val.m_id); break;
 		case INT: name = concatenateString("INT", ""); break;
 		case REAL: name = concatenateString("REAL", ""); break;
 		case STRING: name = concatenateString("STRING", ""); break;
@@ -74,6 +61,7 @@ void printTree(ast_node *root, Agraph_t *graph, Agnode_t *node)
 		case FUNC: name = concatenateString("FUNC", root->funcName); break;
 		case FUNCS: name = concatenateString("FUNCS", root->funcName); break;
 		case EXPRESSIONS: name = concatenateString("EXPRESSIONS", ""); break;
+		case DECLARATION: name = concatenateString("DECLARATION", root->val.m_id); break;
 		default: name = "Unknown Node";printf("Unknown node in printing\n"); return; 
 	}
 
@@ -109,8 +97,9 @@ value_t execute(ast_node *root)
 		{
 			case FUNC: execute(root->childNodes[0]); break;
 			case EXPRESSIONS:  execute(root->childNodes[0]); execute(root->childNodes[1]); break;
-			case ASSIGN: val = execute(root->childNodes[1]); assignExpression(root->childNodes[0]->val.ID, val); break;
-			case ID: val = getExpression(root->val.ID); return val;
+			case ASSIGN: val = execute(root->childNodes[1]); setvar(root->childNodes[0]->val.m_id, val.m_int);  break;
+			case DECLARATION: setvar(root->val.m_id, 0); break;
+			case ID:  val.m_int = getvar(root->val.m_id); return val;
 			case INT: return root->val;
 			case PLUS: {
 					value_t op1 = execute(root->childNodes[0]); value_t op2 = execute(root->childNodes[1]); val = plusOperation(op1, op2); return val; 
@@ -127,11 +116,11 @@ value_t execute(ast_node *root)
 
 void printExpression(value_t val)
 {
-	switch(val.dType)
+	switch(val.m_flag)
 	{
 
-		case typeInt: printf("> %d\n", val.INR); break;
-		case typeString: printf(">> %s\n", val.STR); break;
+		case intType: printf("> %d\n", val.m_int); break;
+		case stringType: printf(">> %s\n", val.m_string); break;
 		default: break;
 	}
 
@@ -142,102 +131,102 @@ value_t plusOperation(value_t op1, value_t op2)
 {
 
 	value_t val;
-	val.dType = op1.dType;
-	val.INR = op1.INR + op2.INR;
+	val.m_flag = op1.m_flag;
+	val.m_int = op1.m_int + op2.m_int;
 	return val;
 
 
 }
 
-value_t getExpression(char *id)
-{
-	value_t val;
-	if(searchvar(id))
-	{
 
-		val.dType = typeInt;
-		val.INR = getvar(id);
-		return val;
-	} else if(searchString(id))
-	{
 
-		val.dType = typeString;
-		val.STR = getString(id);
-		return val;
 
-	} else 
-	{ 
 
-		fprintf(stderr, "Use of undeclared identifier %s\n", id);
-		exit(0);
-	} 
 
-	return val;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	
 
-}
 
-void assignExpression(char *id, value_t val)
-{
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	
-	
-	switch(val.dType)
-	{
-		case typeInt: setvar(id, val.INR); break;
-		case typeString: setString(id, val.STR); break;
-		default: printf("Defaulting\n"); break;
 
-	}	
 
-}
 
-void setString(char *id, char *string)
-{
 
-	strings[(int)(*id)] = string;
 
-}
 
-char *getString(char *id)
-{
 
-	return strings[(int)(*id)];
 
-}
 
-int searchString(char *id)
-{
 
-	if(strings[(int)(*id)] != NULL)
-		return 1;
 
-	return 0;
 
-}
 
-void setvar(char *id, int val)
-{
-	
-	vars[(int)(*id)] = val;
 
-}
 
-int getvar(char *id)
-{
 
-		return vars[(int)(*id)];
 
-}
 
-int searchvar(char *id)
-{
 
-	if(vars[(int)(*id)] != 0)
-		return 1;
 
-	return 0;
-
-}
 
 
 
