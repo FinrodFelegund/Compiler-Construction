@@ -1,7 +1,9 @@
+
 func test()
 {
 
-	print(1.36);
+	real t = 10;
+	print(t);
 
 }
 
@@ -9,13 +11,30 @@ func test()
 func main()
 {
 
-	int a = 5;
-	int b = a + a;
-	print(1);
+	int a = 10;
+	a = 5;
 	print(a);
-	print(b);
+	int b = a;
+	int d = 25 + a;
+	string c = "Hello \xWorld\x!";
+	print(c);
 	
-	
-	
-	
+
+
+
+
+
+
+
 }
+
+
+
+
+
+
+
+
+
+
+

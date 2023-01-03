@@ -19,16 +19,23 @@ typedef struct
 {
 
 	value_t *vals;
-	int used;
 	int size;
-
 
 } var_stack;
 
-int vars[256];
+void stack_push(var_stack *st, value_t val);
+void enter_func(var_stack *st);
+void leave_func(var_stack *st);
+value_t *lookUp(var_stack *st, char *id);
+void var_declare(var_stack *st, value_t val, char *id);
+void var_set(var_stack *st, value_t val, char *id);
+value_t var_get(var_stack *st, char *id);
+void var_dump(var_stack *st);
+void printVariable(value_t val);
 
-void setvar(char *id, int nr);
-int getvar(char *id);
+
+
+
 
 
 

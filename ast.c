@@ -1,7 +1,8 @@
 #include "ast.h"
 
 int nodeCounter = 0;
-
+var_stack stack;
+int l = 0;
 
 ast_node *new_node(int type)
 {
@@ -43,8 +44,9 @@ void printTree(ast_node *root, Agraph_t *graph, Agnode_t *node)
 	//base case
 	if(root == NULL)
 		return;
-
 	
+	//printf("Node: %d ", l++); 
+	//printf("%d\n", root->type);
 	char *name;
 	switch(root->type)
 	{
@@ -57,15 +59,16 @@ void printTree(ast_node *root, Agraph_t *graph, Agnode_t *node)
 		case MIN: name = concatenateString("MIN", ""); break;
 		case MUL: name = concatenateString("MUL", ""); break;
 		case DIV: name = concatenateString("DIV", ""); break;
-		case ASSIGN: name = concatenateString("ASSIGN", ""); break;
 		case FUNC: name = concatenateString("FUNC", root->funcName); break;
-		case FUNCS: name = concatenateString("FUNCS", root->funcName); break;
+		case FUNCS: name = concatenateString("FUNCS", ""); break;
 		case EXPRESSIONS: name = concatenateString("EXPRESSIONS", ""); break;
-		case DECLARATION: name = concatenateString("DECLARATION", root->val.m_id); break;
+		case DEFINITION: name = concatenateString("DEFINITION", ""); break;
+		case RVALUE: name = concatenateString("RVALUE", ""); break;
+		case DECLARATION: name = concatenateString("DECLARATION", getDataType(root->val)); name = concatenateString(name, root->val.m_id); break;
 		default: name = "Unknown Node";printf("Unknown node in printing\n"); return; 
 	}
 
-	
+	//printf("%s\n", name);	
 	char buffer[10];
 	sprintf(buffer, "%d", nodeCounter++);	
 	Agnode_t *n = agnode(graph, buffer, 1);
@@ -92,24 +95,27 @@ value_t execute(ast_node *root)
 	value_t val;
 	if(root != NULL)
 	{	
-		//printf("Node type: %d\n", root->type);
+//		printf("Node type: %d\n", root->type);
 		switch(root->type)
 		{
-			case FUNC: execute(root->childNodes[0]); break;
-			case EXPRESSIONS:  execute(root->childNodes[0]); execute(root->childNodes[1]); break;
-			case ASSIGN: val = execute(root->childNodes[1]); setvar(root->childNodes[0]->val.m_id, val.m_int);  break;
-			case DECLARATION: setvar(root->val.m_id, 0); break;
-			case ID:  val.m_int = getvar(root->val.m_id); return val;
+			case FUNC: enter_func(&stack); execute(root->childNodes[0]); var_dump(&stack); leave_func(&stack); var_dump(&stack);  break;
+			case EXPRESSIONS:  execute(root->childNodes[0]); execute(root->childNodes[1]); break;	
+			case DECLARATION: val = createEmpty(); val.m_flag = root->val.m_flag; var_declare(&stack, val, root->val.m_id); break;
+			case DEFINITION: execute(root->childNodes[0]); val = execute(root->childNodes[1]); var_set(&stack, val, root->childNodes[0]->val.m_id); break; 
+			case RVALUE: val = execute(root->childNodes[0]); return val;
+			case ID:  val = var_get(&stack, root->val.m_id); return val;
 			case INT: return root->val;
 			case PLUS: {
 					value_t op1 = execute(root->childNodes[0]); value_t op2 = execute(root->childNodes[1]); val = plusOperation(op1, op2); return val; 
 				   }  
 			case PRINT: val = execute(root->childNodes[0]); printExpression(val); break; 
 			case STRING: return root->val;
+			case REAL: return root->val;
 			default: printf("Unknown Node in executing\n"); break;
 
 		}
 	}
+	
 	return val;	
 
 }
@@ -120,6 +126,7 @@ void printExpression(value_t val)
 	{
 
 		case intType: printf("> %d\n", val.m_int); break;
+		case realType: printf("> %f\n", val.m_real); break;
 		case stringType: printf(">> %s\n", val.m_string); break;
 		default: break;
 	}
@@ -138,98 +145,31 @@ value_t plusOperation(value_t op1, value_t op2)
 
 }
 
+value_t createEmpty()
+{
 
+	value_t val;
+	val.m_int = 0;
+	val.m_real = 0;
+	val.m_string = NULL;
+	val.m_flag = 0;
+	val.scopeBorder = 0;
+	return val;
 
+}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+char *getDataType(value_t val)
+{
 	
+	switch(val.m_flag)
+	{
+		case intType: return "int";
+		case realType: return "real";
+		case stringType: return "string";
+		default: break;
+	}
+	return "";
+
+}
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	

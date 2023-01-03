@@ -6,13 +6,11 @@
 
 
 
-enum node_types {ID = 0, INT = 1, REAL = 2, STRING = 3, PRINT = 4, PLUS = 5, MIN = 6, MUL = 7, DIV = 8, ASSIGN = 9, FUNC = 10, FUNCS = 11, EXPRESSIONS = 12, DECLARATION = 13, UNKNOWN = 14};
+enum node_types {ID = 0, INT = 1, REAL = 2, STRING = 3, PRINT = 4, PLUS = 5, MIN = 6, MUL = 7, DIV = 8, FUNC = 9, FUNCS = 10, EXPRESSIONS = 11, DECLARATION = 12, DEFINITION = 13, RVALUE = 14 };
 typedef enum node_types node_type;
 
 
 GVC_t *gvc;
-var_stack stack;
-
 
 
 #define MAXCHILDREN 5
@@ -33,8 +31,8 @@ ast_node *new_node(int type);
 void print(ast_node *root);
 void printTree(ast_node *root, Agraph_t *graph, Agnode_t *node);
 value_t execute(ast_node *root);
-
-
+value_t createEmpty();
+char *getDataType(value_t val);
 
 value_t plusOperation(value_t op1, value_t op2);
 void printExpression(value_t val);
