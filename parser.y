@@ -118,6 +118,7 @@ ARITHMETIC: RVALUE PLUOP RVALUE  { $$ = new_node(PLUS); $$->childNodes[0] = $1; 
 RVALUE:     CONSTANT	         { $$ = new_node(RVALUE); $$->childNodes[0] = $1; }
 	  | VARIABLE		 { $$ = new_node(RVALUE); $$->childNodes[0] = $1; }
 	  | ARITHMETIC           { $$ = new_node(RVALUE); $$->childNodes[0] = $1; }
+	  | FUNCTIONCALL         { ; }
 
 CONSTANT:   _int                 { $$ = new_node(INT); $$->val.m_int = $1; $$->val.m_flag = intType; }
           | _real                { $$ = new_node(REAL); $$->val.m_real = $1; $$->val.m_flag = realType; }
