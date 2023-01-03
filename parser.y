@@ -136,7 +136,7 @@ TYPE:       _INT                        { $$ = intType; }
 FUNCTIONCALL: _id LPAREN PARAMS RPAREN { ; }
 
 PARAMS: PARAMS RVALUE { ; }
-      | RVALUE { ; }
+      | { ; }
 	
 %%
 
