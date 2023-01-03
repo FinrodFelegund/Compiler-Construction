@@ -6,7 +6,7 @@
 
 
 
-enum node_types {ID = 0, INT = 1, REAL = 2, STRING = 3, PRINT = 4, PLUS = 5, MIN = 6, MUL = 7, DIV = 8, FUNC = 9, FUNCS = 10, EXPRESSIONS = 11, DECLARATION = 12, DEFINITION = 13, RVALUE = 14 };
+enum node_types {ID = 0, INT = 1, REAL = 2, STRING = 3, PRINT = 4, PLUS = 5, MIN = 6, MUL = 7, DIV = 8, FUNC = 9, FUNCS = 10, EXPRESSIONS = 11, DECLARATION = 12, DEFINITION = 13, RVALUE = 14, FUNCTIONCALL = 15 };
 typedef enum node_types node_type;
 
 
@@ -38,7 +38,22 @@ value_t plusOperation(value_t op1, value_t op2);
 void printExpression(value_t val);
 
 
+typedef struct 
+{
+	char *id;
+	ast_node *node; 
+} function_node;
 
+typedef struct
+{
+
+	function_node *nodes;
+	int size;
+
+} function_stack;
+
+void pushNode(char *id, ast_node *node);
+ast_node *getFunction(char *id);
 
 
 

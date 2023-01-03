@@ -93,7 +93,7 @@ FUNCTIONS: FUNCTIONS FUNCTION { /*printf("Creating funcs\n");*/ $$ = new_node(FU
 	 	    
 
 FUNCTION: _FUNC _id LPAREN RPAREN LCURLI EXPRESSIONS RCURLI { /*printf("Creating actual functions\n");*/ $$ = new_node(FUNC); $$->childNodes[0] = $6; $$->funcName = strdup($2);
-							      if((strcmp($2, "main") == 0) && mainFunction == NULL){ mainFunction = $$; }
+							      if((strcmp($2, "main") == 0) && mainFunction == NULL){ mainFunction = $$; } else { pushNode($2, $$); }
 							    }   
 							    	  
 EXPRESSIONS: EXPRESSIONS EXPRESSION SEMI { $$ = new_node(EXPRESSIONS); $$->childNodes[0] = $1; $$->childNodes[1] = $2; } 
@@ -133,7 +133,7 @@ TYPE:       _INT                        { $$ = intType; }
 	  | _STRING			{ $$ = stringType; }
 	  | _REAL			{ $$ = realType; }
 
-FUNCTIONCALL: _id LPAREN PARAMS RPAREN { ; }
+FUNCTIONCALL: _id LPAREN PARAMS RPAREN { $$ = new_node(FUNCTIONCALL); $$->val.m_id = strdup($1); }
 
 PARAMS: PARAMS RVALUE { ; }
       | { ; }

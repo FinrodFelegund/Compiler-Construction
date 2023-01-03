@@ -25,15 +25,14 @@ void printVariable(value_t val)
 }
 
 void stack_push(var_stack *st, value_t val)
-{
-		
+{	
 	st->vals = realloc(st->vals, (st->size + 1) * sizeof(value_t));
 	st->vals[st->size++] = val;
 }
 
 void enter_func(var_stack *st)
 {	
-	printf("Entering function\n");
+//	printf("Entering function\n");
 	value_t val;
 	val.m_id = "";
 	val.scopeBorder = 1;
@@ -44,7 +43,7 @@ void enter_func(var_stack *st)
 
 void leave_func(var_stack *st)
 {
-	printf("Leaving function\n");
+//	printf("Leaving function\n");
 	int i = st->size - 1;
 	for(; i >= 0; i--)
 	{

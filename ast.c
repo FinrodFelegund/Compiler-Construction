@@ -3,6 +3,7 @@
 int nodeCounter = 0;
 var_stack stack;
 int l = 0;
+function_stack f_stack;
 
 ast_node *new_node(int type)
 {
@@ -65,6 +66,7 @@ void printTree(ast_node *root, Agraph_t *graph, Agnode_t *node)
 		case DEFINITION: name = concatenateString("DEFINITION", ""); break;
 		case RVALUE: name = concatenateString("RVALUE", ""); break;
 		case DECLARATION: name = concatenateString("DECLARATION", getDataType(root->val)); name = concatenateString(name, root->val.m_id); break;
+		case FUNCTIONCALL: name = concatenateString("FUNCTIONCALL", root->val.m_id); break; 
 		default: name = "Unknown Node";printf("Unknown node in printing\n"); return; 
 	}
 
@@ -98,7 +100,7 @@ value_t execute(ast_node *root)
 //		printf("Node type: %d\n", root->type);
 		switch(root->type)
 		{
-			case FUNC: enter_func(&stack); execute(root->childNodes[0]); var_dump(&stack); leave_func(&stack); var_dump(&stack);  break;
+			case FUNC: enter_func(&stack); execute(root->childNodes[0]); var_dump(&stack); leave_func(&stack); break;
 			case EXPRESSIONS:  execute(root->childNodes[0]); execute(root->childNodes[1]); break;	
 			case DECLARATION: val = createEmpty(); val.m_flag = root->val.m_flag; var_declare(&stack, val, root->val.m_id); break;
 			case DEFINITION: execute(root->childNodes[0]); val = execute(root->childNodes[1]); var_set(&stack, val, root->childNodes[0]->val.m_id); break; 
@@ -111,6 +113,7 @@ value_t execute(ast_node *root)
 			case PRINT: val = execute(root->childNodes[0]); printExpression(val); break; 
 			case STRING: return root->val;
 			case REAL: return root->val;
+			case FUNCTIONCALL: { ast_node *node = getFunction(root->val.m_id); execute(node); break; }
 			default: printf("Unknown Node in executing\n"); break;
 
 		}
@@ -170,6 +173,37 @@ char *getDataType(value_t val)
 	}
 	return "";
 
+}
+
+void pushNode(char *id, ast_node *node)
+{
+
+	function_node n;
+	n.id = strdup(id);
+	n.node = node;
+	f_stack.nodes = realloc(f_stack.nodes, (f_stack.size + 1) * sizeof(function_node));
+	f_stack.nodes[f_stack.size++] = n;
+	
+
+}
+
+ast_node *getFunction(char *id)
+{
+
+	for(int i = 0; i < f_stack.size; i++)
+	{
+
+		if(strcmp(id, f_stack.nodes[i].id) == 0)
+		{
+
+			return f_stack.nodes[i].node;
+
+		}
+	
+	}
+
+	fprintf(stderr, "%s\n", "Unrecognized function");
+	exit(1);
 }
 
 
