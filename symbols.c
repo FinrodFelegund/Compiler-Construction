@@ -11,8 +11,12 @@ void printVariable(value_t val)
 
 	}
 		
-
-	printf("ID: %s Value: ", val.m_id);
+	if(val.m_id == NULL)
+	{
+		printf("Constant Value: ");
+	} else {
+		printf("ID: %s Value: ", val.m_id);
+	}
 	switch(val.m_flag)
 	{
 
@@ -61,7 +65,12 @@ value_t *lookUp(var_stack *st, char *id)
 	int i = st->size - 1;
 	for(; i >= 0; i--)
 	{
+		if(st->vals[i].scopeBorder == 1)
+		{
 
+			return NULL;
+
+		}
 		if(strcmp(st->vals[i].m_id, id) == 0)
 			return &st->vals[i];
 
@@ -78,6 +87,7 @@ void var_declare(var_stack *st, value_t val, char *id)
 	{
 
 		fprintf(stderr, "Redeclaration of variable \"%s\" not allowed\n", id);
+		var_dump(st);
 		exit(1);
 
 	}
@@ -118,7 +128,7 @@ value_t var_get(var_stack *st, char *id)
 	
 	}
 
-	fprintf(stderr, "Unrecognized variable \"%s \"\n", id);
+	fprintf(stderr, "Unrecognized variable \"%s\"\n", id);
 	exit(1);
 	
 
@@ -141,9 +151,47 @@ void var_dump(var_stack *st)
 			printVariable(st->vals[i]);
 		}
 	}
-	printf("-- Bottom --\n");
+	printf("-- Bottom --\n\n");
 
 
 }
 
+int getTopFunctionSize(var_stack *st)
+{
 
+	int i = st->size - 1;
+	int counter = 0;
+	for(; i >= 0; i--)
+	{
+
+		if(st->vals[i].scopeBorder)
+		{
+			return counter;
+		}
+		counter++;
+	}
+	return counter;
+
+}
+
+void var_set_function(var_stack *st, value_t *vals, int size)
+{
+
+	int top = st->size - 1;
+	int i = size - 1;
+	for(; i >= 0; i--)
+	{
+
+		switch(vals[i].m_flag)
+		{
+
+			case intType: st->vals[top].m_int = vals[i].m_int; break;
+			case realType: st->vals[top].m_real = vals[i].m_real; break;
+			case stringType: st->vals[top].m_string = strdup(vals[i].m_string); break;
+			default: break;
+
+		}
+		top--;
+	} 	
+
+}

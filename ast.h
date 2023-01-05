@@ -6,7 +6,7 @@
 
 
 
-enum node_types {ID = 0, INT = 1, REAL = 2, STRING = 3, PRINT = 4, PLUS = 5, MIN = 6, MUL = 7, DIV = 8, FUNC = 9, FUNCS = 10, EXPRESSIONS = 11, DECLARATION = 12, DEFINITION = 13, RVALUE = 14, FUNCTIONCALL = 15 };
+enum node_types {ID = 0, INT = 1, REAL = 2, STRING = 3, PRINT = 4, PLUS = 5, MIN = 6, MUL = 7, DIV = 8, FUNC = 9, FUNCS = 10, EXPRESSIONS = 11, DECLARATION = 12, DEFINITION = 13, RVALUE = 14, FUNCTIONCALL = 15, FUNCPARAMS = 16, CALLPARAMS = 17 };
 typedef enum node_types node_type;
 
 
@@ -37,11 +37,13 @@ char *getDataType(value_t val);
 value_t plusOperation(value_t op1, value_t op2);
 void printExpression(value_t val);
 
+// --- FUNCTIONS ---
 
-typedef struct 
+typedef struct
 {
 	char *id;
-	ast_node *node; 
+	ast_node *node;
+
 } function_node;
 
 typedef struct
@@ -52,9 +54,26 @@ typedef struct
 
 } function_stack;
 
-void pushNode(char *id, ast_node *node);
+void pushFunction(char *id, ast_node *node);
 ast_node *getFunction(char *id);
+void dumpFunctions();
 
+// --- FUNCTIONS ---
 
+// --- CALLING PARAMETER ---
 
+typedef struct 
+{
 
+	value_t *vals;
+	int size;
+
+} callParams;
+
+void pushParam(value_t val);
+void resetParams();
+void dumpParams();
+void setParams();
+int getParamsSize();
+
+// --- CALLING PARAMETER

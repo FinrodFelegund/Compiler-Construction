@@ -6,7 +6,7 @@ exec: parser.tab.o lexer.yy.o ast.o symbols.o
 	$(CC) -o $@ parser.tab.o lexer.yy.o ast.o symbols.o $(LDLIBS)
  
 parser.tab.c parser.tab.h: parser.y 
-	bison --defines -t  parser.y  
+	bison --defines -v parser.y  
  
 ast.o: ast.c ast.h
 	$(CC) -c ast.c 

@@ -1,21 +1,29 @@
 
-func test()
+
+
+
+
+
+
+
+
+
+func test1(int b, int c, real d)
 {
 
-	real t = 3.14;
-	print(t);
-
+	print(b);
+	print(c);
+	print(d);
 }
-
 
 func main()
 {
-
-	int a = 10;
-	print(a);
-	test();	
-	test();
+	int b = 10;
+	int c = 5;
+	real d = 1.4;
+	test1(b, c, d);
 }
+
 
 
 

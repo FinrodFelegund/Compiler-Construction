@@ -4,6 +4,7 @@ int nodeCounter = 0;
 var_stack stack;
 int l = 0;
 function_stack f_stack;
+callParams p_stack;
 
 ast_node *new_node(int type)
 {
@@ -66,7 +67,9 @@ void printTree(ast_node *root, Agraph_t *graph, Agnode_t *node)
 		case DEFINITION: name = concatenateString("DEFINITION", ""); break;
 		case RVALUE: name = concatenateString("RVALUE", ""); break;
 		case DECLARATION: name = concatenateString("DECLARATION", getDataType(root->val)); name = concatenateString(name, root->val.m_id); break;
-		case FUNCTIONCALL: name = concatenateString("FUNCTIONCALL", root->val.m_id); break; 
+		case FUNCTIONCALL: name = concatenateString("FUNCTIONCALL", root->val.m_id); break;
+		case FUNCPARAMS: name = concatenateString("FUNCTIONSPARAMS", ""); break;
+		case CALLPARAMS: name = concatenateString("CALLPARAMS", ""); break; 
 		default: name = "Unknown Node";printf("Unknown node in printing\n"); return; 
 	}
 
@@ -95,30 +98,38 @@ void printTree(ast_node *root, Agraph_t *graph, Agnode_t *node)
 value_t execute(ast_node *root)
 {	
 	value_t val;
+	val.empty = 0;
 	if(root != NULL)
 	{	
-//		printf("Node type: %d\n", root->type);
+//	printf("Node type: %d\n", root->type);
 		switch(root->type)
 		{
-			case FUNC: enter_func(&stack); execute(root->childNodes[0]); var_dump(&stack); leave_func(&stack); break;
+			case FUNC: enter_func(&stack); execute(root->childNodes[0]); var_dump(&stack); setParams(); resetParams(); execute(root->childNodes[1]); var_dump(&stack); leave_func(&stack); break;
 			case EXPRESSIONS:  execute(root->childNodes[0]); execute(root->childNodes[1]); break;	
 			case DECLARATION: val = createEmpty(); val.m_flag = root->val.m_flag; var_declare(&stack, val, root->val.m_id); break;
 			case DEFINITION: execute(root->childNodes[0]); val = execute(root->childNodes[1]); var_set(&stack, val, root->childNodes[0]->val.m_id); break; 
 			case RVALUE: val = execute(root->childNodes[0]); return val;
-			case ID:  val = var_get(&stack, root->val.m_id); return val;
-			case INT: return root->val;
+			case ID:  val = var_get(&stack, root->val.m_id); val.empty = 0; return val;
+			case INT: root->val.empty = 0; return root->val;
 			case PLUS: {
 					value_t op1 = execute(root->childNodes[0]); value_t op2 = execute(root->childNodes[1]); val = plusOperation(op1, op2); return val; 
 				   }  
 			case PRINT: val = execute(root->childNodes[0]); printExpression(val); break; 
-			case STRING: return root->val;
-			case REAL: return root->val;
-			case FUNCTIONCALL: { ast_node *node = getFunction(root->val.m_id); execute(node); break; }
+			case STRING: root->val.empty = 0; return root->val;
+			case REAL: root->val.empty = 0; return root->val;
+			case FUNCTIONCALL: { /*dumpFunctions();*/ ast_node *node = getFunction(root->val.m_id); execute(root->childNodes[0]); dumpParams(); execute(node); break; }
+			case FUNCPARAMS: execute(root->childNodes[0]); execute(root->childNodes[1]); break;
+			case CALLPARAMS: { 
+					   val = execute(root->childNodes[0]); printf("Adding variable\n"); pushParam(val);  
+					   val = execute(root->childNodes[1]); printf("Adding variable\n"); pushParam(val); 
+					   break; 
+					 } 
 			default: printf("Unknown Node in executing\n"); break;
 
 		}
 	}
-	
+
+	val.empty = 1;	
 	return val;	
 
 }
@@ -175,7 +186,7 @@ char *getDataType(value_t val)
 
 }
 
-void pushNode(char *id, ast_node *node)
+void pushFunction(char *id, ast_node *node)
 {
 
 	function_node n;
@@ -206,4 +217,80 @@ ast_node *getFunction(char *id)
 	exit(1);
 }
 
+void dumpFunctions()
+{
 
+	printf("--- Functions Top ---\n");
+	for(int i = 0; i < f_stack.size; i++)
+	{
+
+		printf("Function: %s\n", f_stack.nodes[i].id);
+
+	}
+	printf("--- Functions Bottom ---\n\n");
+
+
+}
+
+void pushParam(value_t val)
+{
+	if(val.empty)
+	{
+		printf("Empty val: %d\n", val.empty);
+		return;
+	}
+	p_stack.vals = realloc(p_stack.vals, (p_stack.size + 1) * sizeof(value_t));
+	p_stack.vals[p_stack.size++] = val;
+
+}
+
+void resetParams()
+{		
+	if(p_stack.vals)
+	{
+
+		free(p_stack.vals);
+		p_stack.vals = NULL;
+
+	}
+	p_stack.size = 0;
+}
+
+void dumpParams()
+{
+	
+	printf("--- Call Variable Top ---\n");
+	int i = p_stack.size - 1;
+	for(; i >= 0; i--)
+	{
+
+		printVariable(p_stack.vals[i]);
+
+	}
+	printf("--- Call Variable Bottom ---\n\n");
+
+}
+
+
+void setParams()
+{
+
+	int j = getTopFunctionSize(&stack);
+	int k = getParamsSize();
+	printf("Amount func stack: %d Amount param stack %d\n", j, k);	
+	if( j != k)
+	{
+	
+		fprintf(stderr, "Function call does not match function definition\n" );
+		exit(1);
+
+	}
+	var_set_function(&stack, p_stack.vals, p_stack.size);
+}
+
+int getParamsSize()
+{
+
+	return p_stack.size;
+
+}

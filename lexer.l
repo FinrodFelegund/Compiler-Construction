@@ -140,6 +140,7 @@ REAL "0"|[0-9]+"."[0-9]+
 "}"       { return RCURLI; }
 ";"       { return SEMI; }
 "="       { return ASS; }
+","       { return COMMA; }
 
 "getInt"  { return _GETINT; }
 "getReal" { return _GETREAL; }

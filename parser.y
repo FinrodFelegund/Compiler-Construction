@@ -47,7 +47,8 @@ typedef struct
        <rconst> _real
        <sconst> _id
 
-%token  SEMI
+%token  COMMA
+	 SEMI
         PLUOP
         MINOP
         MULOP
@@ -71,8 +72,9 @@ typedef struct
        _INT
        _REAL
        _STRING
+	
 
-%type  <ast> EXPRESSION FUNCTIONS FUNCTION EXPRESSIONS VARIABLE DECLARATION PRINT DEFINITION ARITHMETIC RVALUE CONSTANT PARAMS FUNCTIONCALL
+%type  <ast> EXPRESSION FUNCTIONS FUNCTION EXPRESSIONS VARIABLE DECLARATION PRINT DEFINITION ARITHMETIC RVALUE CONSTANT CALLPARAMS FUNCTIONCALL FUNCPARAMS 
 %type  <data_type> TYPE
 
 %right ASS _PRINT
@@ -92,8 +94,8 @@ FUNCTIONS: FUNCTIONS FUNCTION { /*printf("Creating funcs\n");*/ $$ = new_node(FU
 	
 	 	    
 
-FUNCTION: _FUNC _id LPAREN RPAREN LCURLI EXPRESSIONS RCURLI { /*printf("Creating actual functions\n");*/ $$ = new_node(FUNC); $$->childNodes[0] = $6; $$->funcName = strdup($2);
-							      if((strcmp($2, "main") == 0) && mainFunction == NULL){ mainFunction = $$; } else { pushNode($2, $$); }
+FUNCTION: _FUNC _id LPAREN FUNCPARAMS RPAREN LCURLI EXPRESSIONS RCURLI { /*printf("Creating actual functions\n");*/ $$ = new_node(FUNC); $$->childNodes[0] = $4; $$->funcName = strdup($2); $$->childNodes[1] = $7;
+							      if((strcmp($2, "main") == 0) && mainFunction == NULL){ mainFunction = $$; } else { pushFunction($2, $$); }
 							    }   
 							    	  
 EXPRESSIONS: EXPRESSIONS EXPRESSION SEMI { $$ = new_node(EXPRESSIONS); $$->childNodes[0] = $1; $$->childNodes[1] = $2; } 
@@ -128,16 +130,20 @@ CONSTANT:   _int                 { $$ = new_node(INT); $$->val.m_int = $1; $$->v
 VARIABLE:   _id                         { $$ = new_node(ID); $$->val.m_id = $1; }
 
 DECLARATION: TYPE _id                   { $$ = new_node(DECLARATION); $$->val.m_id = $2; $$->val.m_flag = $1; } 
- 
+	   
 TYPE:       _INT                        { $$ = intType; } 
 	  | _STRING			{ $$ = stringType; }
 	  | _REAL			{ $$ = realType; }
 
-FUNCTIONCALL: _id LPAREN PARAMS RPAREN { $$ = new_node(FUNCTIONCALL); $$->val.m_id = strdup($1); }
+FUNCTIONCALL: _id LPAREN CALLPARAMS RPAREN { $$ = new_node(FUNCTIONCALL); $$->val.m_id = strdup($1); $$->childNodes[0] = $3; }
 
-PARAMS: PARAMS RVALUE { ; }
-      | { ; }
-	
+CALLPARAMS: CALLPARAMS COMMA RVALUE { $$ = new_node(CALLPARAMS); $$->childNodes[0] = $1; $$->childNodes[1] = $3; }
+      	   | RVALUE { $$ = new_node(CALLPARAMS); $$->childNodes[0] = $1; }
+	   | { $$ = NULL; } 	
+FUNCPARAMS: FUNCPARAMS COMMA DECLARATION      { $$ = new_node(FUNCPARAMS); $$->childNodes[0] = $1; $$->childNodes[1] = $3; } 
+	   | DECLARATION { $$ = $1; }
+	   | { $$ = NULL; }
+
 %%
 
 

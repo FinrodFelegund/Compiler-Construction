@@ -12,6 +12,7 @@ typedef struct
 	char *m_string;
 	types m_flag;
 	int scopeBorder;
+	int empty;
 
 } value_t;
 
@@ -32,7 +33,8 @@ void var_set(var_stack *st, value_t val, char *id);
 value_t var_get(var_stack *st, char *id);
 void var_dump(var_stack *st);
 void printVariable(value_t val);
-
+int getTopFunctionSize(var_stack *st);
+void var_set_function(var_stack *st, value_t *vals, int size);
 
 
 
