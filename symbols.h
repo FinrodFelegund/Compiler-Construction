@@ -13,6 +13,7 @@ typedef struct
 	types m_flag;
 	int scopeBorder;
 	int empty;
+	int logical;
 
 } value_t;
 

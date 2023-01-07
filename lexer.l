@@ -114,7 +114,7 @@ REAL "0"|[0-9]+"."[0-9]+
 	       BEGIN(INITIAL); return _str; }
 <String>"\\x" { insert("\""); }
 <String>"\\nl" { insert("\n"); lineno++; }
-<String>[^\"\\x\\n]*   { insert(yytext); }
+<String>[^\"\\x\\]*   { insert(yytext); }
 
 "int"     { return _INT; }
 "real"    { return _REAL; }
@@ -130,6 +130,15 @@ REAL "0"|[0-9]+"."[0-9]+
 "/"       { return DIVOP; }
 "++"      { return INCR; }
 "--"      { return DECR; }
+"=="      { return _EQU; }
+"<"       { return _LESS; }
+"<="      { return _LESSEQU; }
+">"       { return _MORE; }
+">="      { return _MOREEQU; }
+"!="      { return _NOTEQU; }
+"||"      { return _OR; }
+"&&"      { return _AND; }
+"!"       { return _NOT; }
 "print"   { return _PRINT; }
 
 "("       { return LPAREN; }
@@ -144,7 +153,7 @@ REAL "0"|[0-9]+"."[0-9]+
 
 "getInt"  { return _GETINT; }
 "getReal" { return _GETREAL; }
-
+"getRand" { return _GETRAND; }
 {ID}      { yylval.sconst = malloc(yyleng); strcpy(yylval.sconst, yytext); return _id; }
 {INT}     { yylval.iconst = atoi(yytext); return _int; }
 {REAL}    { yylval.rconst = atof(yytext); return _real; }

@@ -47,7 +47,13 @@ typedef struct
        <rconst> _real
        <sconst> _id
 
-%token  COMMA
+%token  _NOTEQU
+	_EQU
+	_LESS
+	_MORE
+	_LESSEQU
+	_MOREEQU
+	COMMA
 	 SEMI
         PLUOP
         MINOP
@@ -69,44 +75,50 @@ typedef struct
         RCURLI
        _GETINT
        _GETREAL
+	_GETRAND
        _INT
        _REAL
        _STRING
-	
+       _OR
+       _AND
+       _NOT	
 
-%type  <ast> EXPRESSION FUNCTIONS FUNCTION EXPRESSIONS VARIABLE DECLARATION PRINT DEFINITION ARITHMETIC RVALUE CONSTANT CALLPARAMS FUNCTIONCALL FUNCPARAMS 
+%type  <ast> INCDEC INSTRUCTIONS OPTIONAL_ELSE CONTROLL LOGICAL EXPRESSION FUNCTIONS FUNCTION VARIABLE DECLARATION PRINT DEFINITION ARITHMETIC RVALUE CONSTANT CALLPARAMS FUNCTIONCALL FUNCPARAMS 
 %type  <data_type> TYPE
 
 %right ASS _PRINT
-%left PLUOP MINOP
-%left MULOP DIVOP
+%left PLUOP MINOP _MORE _LESS _EQU _LESSEQU _MOREEQU _NOTEQU _AND _OR
+%left MULOP DIVOP _NOT
 
 
 %start START
 
 %%
 
-START: FUNCTIONS {  print($1);  execute(mainFunction); }
+START: FUNCTIONS {  print($1); if(mainFunction){ execute(mainFunction);} else { printf("No main function detected\n"); } }
        | { printf("No input provided\n"); }
 
 FUNCTIONS: FUNCTIONS FUNCTION { /*printf("Creating funcs\n");*/ $$ = new_node(FUNCS); $$->childNodes[0] = $1; $$->childNodes[1] = $2; } 
 	 | FUNCTION { $$ = $1; /*printf("Creating func\n");*/ } 
-	
-	 	    
 
-FUNCTION: _FUNC _id LPAREN FUNCPARAMS RPAREN LCURLI EXPRESSIONS RCURLI { /*printf("Creating actual functions\n");*/ $$ = new_node(FUNC); $$->childNodes[0] = $4; $$->funcName = strdup($2); $$->childNodes[1] = $7;
-							      if((strcmp($2, "main") == 0) && mainFunction == NULL){ mainFunction = $$; } else { pushFunction($2, $$); }
-							    }   
-							    	  
-EXPRESSIONS: EXPRESSIONS EXPRESSION SEMI { $$ = new_node(EXPRESSIONS); $$->childNodes[0] = $1; $$->childNodes[1] = $2; } 
-		| { $$ = NULL; }	
+FUNCTION: _FUNC _id LPAREN FUNCPARAMS RPAREN LCURLI INSTRUCTIONS RCURLI { $$ = new_node(FUNC); $$->childNodes[0] = $4; $$->funcName = strdup($2); $$->childNodes[1] = $7;
+                                                               if((strcmp($2, "main") == 0) && mainFunction == NULL){ mainFunction = $$; } else { pushFunction($2, $$); }
+                                                             }   	
+INSTRUCTIONS: INSTRUCTIONS EXPRESSION { $$ = new_node(INSTRUCTIONS); $$->childNodes[0] = $1; $$->childNodes[1] = $2; }
+		| INSTRUCTIONS CONTROLL { $$ = new_node(INSTRUCTIONS); $$->childNodes[0] = $1; $$->childNodes[1] = $2; }
+		| { $$ = NULL; }
+	   
+CONTROLL: _IF LPAREN LOGICAL RPAREN LCURLI INSTRUCTIONS RCURLI OPTIONAL_ELSE { $$ = new_node(IF); $$->childNodes[0] = $3; $$->childNodes[1] = $6; $$->childNodes[3] = $8; }
+         | _WHILE LPAREN LOGICAL RPAREN LCURLI INSTRUCTIONS RCURLI            { $$ = new_node(WHILE); $$->childNodes[0] = $3; $$->childNodes[1] = $6; }
 
-EXPRESSION: DEFINITION   { $$ = $1; }  
-	  | DECLARATION  { $$ = $1; }
-	  | PRINT        { $$ = $1; }
-	  | FUNCTIONCALL { $$ = $1; } 
-	  
+OPTIONAL_ELSE: _ELSE LCURLI INSTRUCTIONS RCURLI { $$ = new_node(ELSE); $$->childNodes[0] = $3; }
+	     | { $$ = NULL; }
 
+EXPRESSION: DEFINITION SEMI   { $$ = $1; }  
+	  | DECLARATION SEMI  { $$ = $1; }
+	  | PRINT SEMI        { $$ = $1; }
+	  | FUNCTIONCALL SEMI { $$ = $1; } 	
+	  | INCDEC SEMI       { $$ = $1; }
 PRINT:      _PRINT LPAREN RVALUE RPAREN { $$ = new_node(PRINT); $$->childNodes[0] = $3; }
 
 DEFINITION: VARIABLE ASS RVALUE     { $$ = new_node(DEFINITION); $$->childNodes[0] = $1; $$->childNodes[1] = $3; }
@@ -116,11 +128,27 @@ ARITHMETIC: RVALUE PLUOP RVALUE  { $$ = new_node(PLUS); $$->childNodes[0] = $1; 
 	  | RVALUE MINOP RVALUE  { $$ = new_node(MIN); $$->childNodes[0] = $1; $$->childNodes[1] = $3; }
 	  | RVALUE MULOP RVALUE  { $$ = new_node(MUL); $$->childNodes[0] = $1; $$->childNodes[1] = $3; }
 	  | RVALUE DIVOP RVALUE  { $$ = new_node(DIV); $$->childNodes[0] = $1; $$->childNodes[1] = $3; }
-	
-RVALUE:     CONSTANT	         { $$ = new_node(RVALUE); $$->childNodes[0] = $1; }
-	  | VARIABLE		 { $$ = new_node(RVALUE); $$->childNodes[0] = $1; }
-	  | ARITHMETIC           { $$ = new_node(RVALUE); $$->childNodes[0] = $1; }
-	  | FUNCTIONCALL         { ; }
+
+
+LOGICAL:    LOGICAL _MORE LOGICAL    { $$ = new_node(LOGICAL); $$->op = strdup(">"); $$->childNodes[0] = $1; $$->childNodes[1] = $3; }
+          | LOGICAL _LESS LOGICAL    { $$ = new_node(LOGICAL); $$->op = strdup("<"); $$->childNodes[0] = $1; $$->childNodes[1] = $3; }
+	  | LOGICAL _EQU LOGICAL     { $$ = new_node(LOGICAL); $$->op = strdup("=="); $$->childNodes[0] = $1; $$->childNodes[1] = $3; }
+	  | LOGICAL _LESSEQU LOGICAL { $$ = new_node(LOGICAL); $$->op = strdup("<="); $$->childNodes[0] = $1; $$->childNodes[1] = $3; }
+	  | LOGICAL _MOREEQU LOGICAL { $$ = new_node(LOGICAL); $$->op = strdup(">="); $$->childNodes[0] = $1; $$->childNodes[1] = $3; }	
+	  | LOGICAL _NOTEQU LOGICAL  { $$ = new_node(LOGICAL); $$->op = strdup("!="); $$->childNodes[0] = $1; $$->childNodes[1] = $3; }
+	  | LOGICAL _AND LOGICAL     { $$ = new_node(LOGICAL); $$->op = strdup("&&"); $$->childNodes[0] = $1; $$->childNodes[1] = $3; }
+	  | LOGICAL _OR LOGICAL      { $$ = new_node(LOGICAL); $$->op = strdup("||"); $$->childNodes[0] = $1; $$->childNodes[1] = $3; }
+	  | LPAREN LOGICAL RPAREN    { $$ = $2; }
+	  | _NOT LOGICAL             { $$ = new_node(LOGICAL); $$->op = strdup("!"); $$->childNodes[0] = $2; }
+	  | RVALUE	   
+
+RVALUE:     CONSTANT	       
+	  | VARIABLE	
+	  | ARITHMETIC 
+	  | FUNCTIONCALL         
+          | INCDEC	 
+INCDEC:   VARIABLE INCR          { $$ = new_node(INCDEC); $$->childNodes[0] = $1; $$->op = strdup("++"); }
+	  | VARIABLE DECR	 { $$ = new_node(INCDEC); $$->childNodes[0] = $1; $$->op = strdup("--"); }
 
 CONSTANT:   _int                 { $$ = new_node(INT); $$->val.m_int = $1; $$->val.m_flag = intType; }
           | _real                { $$ = new_node(REAL); $$->val.m_real = $1; $$->val.m_flag = realType; }

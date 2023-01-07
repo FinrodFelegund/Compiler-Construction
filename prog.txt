@@ -1,37 +1,12 @@
 
-
-
-
-
-
-
-
-
-
-func test1(int b, int c, real d)
-{
-
-	print(b);
-	print(c);
-	print(d);
-}
-
 func main()
 {
-	int b = 10;
-	int c = 5;
-	real d = 1.4;
-	test1(b, c, d);
+	int a = 5;
+
+	while(a--)
+	{
+		print(a);
+	}
+	
 }
-
-
-
-
-
-
-
-
-
-
-
 

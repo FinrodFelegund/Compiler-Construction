@@ -49,7 +49,7 @@ void printTree(ast_node *root, Agraph_t *graph, Agnode_t *node)
 	
 	//printf("Node: %d ", l++); 
 	//printf("%d\n", root->type);
-	char *name;
+	char *name = NULL;
 	switch(root->type)
 	{
 		case ID: name = concatenateString("ID", root->val.m_id); break;
@@ -63,13 +63,19 @@ void printTree(ast_node *root, Agraph_t *graph, Agnode_t *node)
 		case DIV: name = concatenateString("DIV", ""); break;
 		case FUNC: name = concatenateString("FUNC", root->funcName); break;
 		case FUNCS: name = concatenateString("FUNCS", ""); break;
-		case EXPRESSIONS: name = concatenateString("EXPRESSIONS", ""); break;
+//		case EXPRESSIONS: name = concatenateString("EXPRESSIONS", ""); break;
 		case DEFINITION: name = concatenateString("DEFINITION", ""); break;
 		case RVALUE: name = concatenateString("RVALUE", ""); break;
 		case DECLARATION: name = concatenateString("DECLARATION", getDataType(root->val)); name = concatenateString(name, root->val.m_id); break;
 		case FUNCTIONCALL: name = concatenateString("FUNCTIONCALL", root->val.m_id); break;
 		case FUNCPARAMS: name = concatenateString("FUNCTIONSPARAMS", ""); break;
-		case CALLPARAMS: name = concatenateString("CALLPARAMS", ""); break; 
+		case CALLPARAMS: name = concatenateString("CALLPARAMS", ""); break;
+		case INSTRUCTIONS: name = concatenateString("INSTRUCTIONS", ""); break;
+		case IF: name = concatenateString("IF", ""); break;
+		case ELSE: name = concatenateString("ELSE", ""); break;
+		case LOGICAL: name = concatenateString("LOGICAL", root->op); break;
+		case WHILE: name = concatenateString("WHILE", ""); break;
+		case INCDEC: name = concatenateString("INCDEC", root->op); break;
 		default: name = "Unknown Node";printf("Unknown node in printing\n"); return; 
 	}
 
@@ -78,7 +84,8 @@ void printTree(ast_node *root, Agraph_t *graph, Agnode_t *node)
 	sprintf(buffer, "%d", nodeCounter++);	
 	Agnode_t *n = agnode(graph, buffer, 1);
 	agsafeset(n, "label", name, "");
-	free(name);	
+	if(name)
+	 free(name);	
 	if(node != NULL)
 	{
 
@@ -104,8 +111,13 @@ value_t execute(ast_node *root)
 //	printf("Node type: %d\n", root->type);
 		switch(root->type)
 		{
+			case INSTRUCTIONS: execute(root->childNodes[0]); execute(root->childNodes[1]); break;
+			case INCDEC: val = execute(root->childNodes[0]); char *id = strdup(val.m_id); val = incdec(root->op, val); var_set(&stack, val, id); break; 
+			case LOGICAL: val.m_flag = root->childNodes[0]->val.m_flag; val.m_int = determineLogical(root->op, execute(root->childNodes[0]), execute(root->childNodes[1])); return val;
+			case IF: val = execute(root->childNodes[0]); if(val.m_int){ execute(root->childNodes[1]); } else if(root->childNodes[3]) { execute(root->childNodes[3]); } break;
+			case ELSE: execute(root->childNodes[0]); break;
+			case WHILE: /*val = execute(root->childNodes[0]);*/ do { execute(root->childNodes[1]); val = execute(root->childNodes[0]); } while(val.m_int); break;
 			case FUNC: enter_func(&stack); execute(root->childNodes[0]); var_dump(&stack); setParams(); resetParams(); execute(root->childNodes[1]); var_dump(&stack); leave_func(&stack); break;
-			case EXPRESSIONS:  execute(root->childNodes[0]); execute(root->childNodes[1]); break;	
 			case DECLARATION: val = createEmpty(); val.m_flag = root->val.m_flag; var_declare(&stack, val, root->val.m_id); break;
 			case DEFINITION: execute(root->childNodes[0]); val = execute(root->childNodes[1]); var_set(&stack, val, root->childNodes[0]->val.m_id); break; 
 			case RVALUE: val = execute(root->childNodes[0]); return val;
@@ -120,8 +132,8 @@ value_t execute(ast_node *root)
 			case FUNCTIONCALL: { /*dumpFunctions();*/ ast_node *node = getFunction(root->val.m_id); execute(root->childNodes[0]); dumpParams(); execute(node); break; }
 			case FUNCPARAMS: execute(root->childNodes[0]); execute(root->childNodes[1]); break;
 			case CALLPARAMS: { 
-					   val = execute(root->childNodes[0]); printf("Adding variable\n"); pushParam(val);  
-					   val = execute(root->childNodes[1]); printf("Adding variable\n"); pushParam(val); 
+					   if(root->childNodes[0]) { val = execute(root->childNodes[0]); printf("Adding variable\n"); pushParam(val); }  
+					   if(root->childNodes[1]) { val = execute(root->childNodes[1]); printf("Adding variable\n"); pushParam(val); } 
 					   break; 
 					 } 
 			default: printf("Unknown Node in executing\n"); break;
@@ -156,6 +168,91 @@ value_t plusOperation(value_t op1, value_t op2)
 	val.m_int = op1.m_int + op2.m_int;
 	return val;
 
+
+}
+
+value_t incdec(char *op, value_t op1)
+{
+	
+	if(strcmp(op, "++") == 0)
+	{
+		switch(op1.m_flag)
+		{
+			case stringType: fprintf(stderr, "%s\n", "Incrementation or Decrementation on strings is not yet alloweed"); exit(1);
+			case intType: op1.m_int = op1.m_int + 1; return op1;
+			case realType: op1.m_real = op1.m_real + 1; return op1;
+			default: return op1;
+		}
+	}
+	if(strcmp(op, "--") == 0)
+	{
+		switch(op1.m_flag)
+		{
+			case stringType: fprintf(stderr, "%s\n", "Incrementation or Decrementation on strings is not yet alloweed"); exit(1);
+                        case intType: op1.m_int = op1.m_int - 1; return op1;
+                        case realType: op1.m_real = op1.m_real - 1; return op1;
+                        default: return op1;
+		}
+	}
+	
+	return op1;
+}
+
+int determineLogical(char *op, value_t op1, value_t op2)
+{
+	
+//	printf("Types: %s %d  %s %d\n", op1.m_id, op1.m_flag, op2.m_id, op2.m_flag);	
+	if(op1.m_flag != op2.m_flag)
+	{
+
+		fprintf(stderr,"%s", "Comparison between different types is illegal\n");
+		exit(1);
+
+	}
+	
+	if(op1.m_flag == stringType)
+	{
+		if(strcmp(op, "<") == 0) return strlen(op1.m_string) < strlen(op2.m_string);
+		if(strcmp(op, ">") == 0) return strlen(op1.m_string) > strlen(op2.m_string);
+		if(strcmp(op, "<=") == 0) return strlen(op1.m_string) <= strlen(op2.m_string);
+		if(strcmp(op, ">=") == 0) return strlen(op1.m_string) >= strlen(op2.m_string);
+		if(strcmp(op, "!=") == 0) return strlen(op1.m_string) != strlen(op2.m_string);
+		if(strcmp(op, "==") == 0) return strlen(op1.m_string) == strlen(op2.m_string);
+		if(strcmp(op, "&&") == 0) return strlen(op1.m_string) && strlen(op2.m_string);
+		if(strcmp(op, "||") == 0) return strlen(op1.m_string) || strlen(op2.m_string);	
+		if(strcmp(op, "!") == 0) return !strlen(op1.m_string); 
+	}
+
+	if(op1.m_flag == intType)
+	{
+		//printf("Operants: %d %d\n", op1.m_int, op2.m_int);
+		if(strcmp(op, "<") == 0) return op1.m_int < op2.m_int;
+                if(strcmp(op, ">") == 0) return op1.m_int > op2.m_int; 
+                if(strcmp(op, "<=") == 0) return op1.m_int <= op2.m_int;
+                if(strcmp(op, ">=") == 0) return op1.m_int >= op2.m_int;
+                if(strcmp(op, "!=") == 0) return op1.m_int != op2.m_int;
+                if(strcmp(op, "==") == 0) return op1.m_int == op2.m_int;
+		if(strcmp(op, "&&") == 0) return op1.m_int && op2.m_int;
+		if(strcmp(op, "||") == 0) return op1.m_int || op2.m_int;
+		if(strcmp(op, "!") == 0) return !op1.m_int; 
+	}
+
+	if(op1.m_flag == realType)
+	{
+
+		if(strcmp(op, "<") == 0) return op1.m_real < op2.m_real;
+                if(strcmp(op, ">") == 0) return op1.m_real > op2.m_real;
+                if(strcmp(op, "<=") == 0) return op1.m_real <= op2.m_real;
+                if(strcmp(op, ">=") == 0) return op1.m_real >= op2.m_real;
+                if(strcmp(op, "!=") == 0) return op1.m_real != op2.m_real;
+                if(strcmp(op, "==") == 0) return op1.m_real == op2.m_real;
+		if(strcmp(op, "&&") == 0) return op1.m_real && op2.m_real;
+		if(strcmp(op, "||") == 0) return op1.m_real || op2.m_real;
+		if(strcmp(op, "!") == 0) return !op1.m_real; 
+	}	
+	  
+
+	return 0;
 
 }
 
@@ -277,7 +374,7 @@ void setParams()
 
 	int j = getTopFunctionSize(&stack);
 	int k = getParamsSize();
-	printf("Amount func stack: %d Amount param stack %d\n", j, k);	
+//	printf("Amount func stack: %d Amount param stack %d\n", j, k);	
 	if( j != k)
 	{
 	
