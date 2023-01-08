@@ -1,4 +1,5 @@
 %{
+#include <assert.h>
 #include "ast.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,7 +48,8 @@ typedef struct
        <rconst> _real
        <sconst> _id
 
-%token  _NOTEQU
+%token  _FOR
+	_NOTEQU
 	_EQU
 	_LESS
 	_MORE
@@ -59,6 +61,7 @@ typedef struct
         MINOP
         MULOP
         DIVOP
+	MODULO
         ASS
         _FUNC
         _IF
@@ -75,7 +78,7 @@ typedef struct
         RCURLI
        _GETINT
        _GETREAL
-	_GETRAND
+       _GETRAND
        _INT
        _REAL
        _STRING
@@ -83,8 +86,9 @@ typedef struct
        _AND
        _NOT	
 
-%type  <ast> INCDEC INSTRUCTIONS OPTIONAL_ELSE CONTROLL LOGICAL EXPRESSION FUNCTIONS FUNCTION VARIABLE DECLARATION PRINT DEFINITION ARITHMETIC RVALUE CONSTANT CALLPARAMS FUNCTIONCALL FUNCPARAMS 
+%type  <ast> GETFUNCTIONS INCDEC INSTRUCTIONS OPTIONAL_ELSE CONTROLL LOGICAL EXPRESSION FUNCTIONS FUNCTION VARIABLE DECLARATION PRINT DEFINITION ARITHMETIC RVALUE CONSTANT CALLPARAMS FUNCTIONCALL FUNCPARAMS 
 %type  <data_type> TYPE
+
 
 %right ASS _PRINT
 %left PLUOP MINOP _MORE _LESS _EQU _LESSEQU _MOREEQU _NOTEQU _AND _OR
@@ -95,21 +99,25 @@ typedef struct
 
 %%
 
-START: FUNCTIONS {  print($1); if(mainFunction){ execute(mainFunction);} else { printf("No main function detected\n"); } }
+START: FUNCTIONS {  print($1); if(mainFunction){ execute(mainFunction);} else { printf("No main function detected\n"); } freeTree($1); }
        | { printf("No input provided\n"); }
 
 FUNCTIONS: FUNCTIONS FUNCTION { /*printf("Creating funcs\n");*/ $$ = new_node(FUNCS); $$->childNodes[0] = $1; $$->childNodes[1] = $2; } 
 	 | FUNCTION { $$ = $1; /*printf("Creating func\n");*/ } 
 
 FUNCTION: _FUNC _id LPAREN FUNCPARAMS RPAREN LCURLI INSTRUCTIONS RCURLI { $$ = new_node(FUNC); $$->childNodes[0] = $4; $$->funcName = strdup($2); $$->childNodes[1] = $7;
-                                                               if((strcmp($2, "main") == 0) && mainFunction == NULL){ mainFunction = $$; } else { pushFunction($2, $$); }
-                                                             }   	
-INSTRUCTIONS: INSTRUCTIONS EXPRESSION { $$ = new_node(INSTRUCTIONS); $$->childNodes[0] = $1; $$->childNodes[1] = $2; }
-		| INSTRUCTIONS CONTROLL { $$ = new_node(INSTRUCTIONS); $$->childNodes[0] = $1; $$->childNodes[1] = $2; }
-		| { $$ = NULL; }
-	   
+                                                                          if((strcmp($2, "main") == 0) && mainFunction == NULL){ mainFunction = $$; } else { pushFunction($2, $$); }
+                                                                        }
+   	
+INSTRUCTIONS:  INSTRUCTIONS EXPRESSION    { $$ = new_node(INSTRUCTIONS); $$->childNodes[0] = $1; $$->childNodes[1] = $2; }
+	     | INSTRUCTIONS CONTROLL      { $$ = new_node(INSTRUCTIONS); $$->childNodes[0] = $1; $$->childNodes[1] = $2; } 
+	     | { $$ = NULL; }
+	     | INSTRUCTIONS LCURLI INSTRUCTIONS RCURLI { $$ = new_node(INSTRUCTIONS); $$->childNodes[0] = $1; if($3){ $3->blockScoped = 1; } $$->childNodes[1] = $3; }
+ 
 CONTROLL: _IF LPAREN LOGICAL RPAREN LCURLI INSTRUCTIONS RCURLI OPTIONAL_ELSE { $$ = new_node(IF); $$->childNodes[0] = $3; $$->childNodes[1] = $6; $$->childNodes[3] = $8; }
          | _WHILE LPAREN LOGICAL RPAREN LCURLI INSTRUCTIONS RCURLI            { $$ = new_node(WHILE); $$->childNodes[0] = $3; $$->childNodes[1] = $6; }
+	 | _FOR LPAREN DEFINITION SEMI LOGICAL SEMI INCDEC RPAREN LCURLI INSTRUCTIONS RCURLI { $$ = new_node(FOR); $$->childNodes[0] = $3; $$->childNodes[1] = $5; $$->childNodes[2] = $7; $$->childNodes[3] = $10; }
+
 
 OPTIONAL_ELSE: _ELSE LCURLI INSTRUCTIONS RCURLI { $$ = new_node(ELSE); $$->childNodes[0] = $3; }
 	     | { $$ = NULL; }
@@ -119,6 +127,7 @@ EXPRESSION: DEFINITION SEMI   { $$ = $1; }
 	  | PRINT SEMI        { $$ = $1; }
 	  | FUNCTIONCALL SEMI { $$ = $1; } 	
 	  | INCDEC SEMI       { $$ = $1; }
+
 PRINT:      _PRINT LPAREN RVALUE RPAREN { $$ = new_node(PRINT); $$->childNodes[0] = $3; }
 
 DEFINITION: VARIABLE ASS RVALUE     { $$ = new_node(DEFINITION); $$->childNodes[0] = $1; $$->childNodes[1] = $3; }
@@ -146,7 +155,13 @@ RVALUE:     CONSTANT
 	  | VARIABLE	
 	  | ARITHMETIC 
 	  | FUNCTIONCALL         
-          | INCDEC	 
+          | INCDEC
+	  | GETFUNCTIONS
+	  
+GETFUNCTIONS: _GETINT  LPAREN RPAREN  { $$ = new_node(GETINT);  } 
+	    | _GETREAL LPAREN RPAREN  { $$ = new_node(GETREAL); }
+	    | _GETRAND LPAREN RPAREN  { $$ = new_node(GETRAND); }
+	  	 
 INCDEC:   VARIABLE INCR          { $$ = new_node(INCDEC); $$->childNodes[0] = $1; $$->op = strdup("++"); }
 	  | VARIABLE DECR	 { $$ = new_node(INCDEC); $$->childNodes[0] = $1; $$->op = strdup("--"); }
 
@@ -174,13 +189,34 @@ FUNCPARAMS: FUNCPARAMS COMMA DECLARATION      { $$ = new_node(FUNCPARAMS); $$->c
 
 %%
 
+int checkFileName(const char *fileName)
+{
 
+	const char *dot = strrchr(fileName, '.');
+	if(strcmp(dot, ".frog") == 0)
+	{
+		return 1;
+        }
+
+	return 0;
+
+}
 
 int main(int argc, char **argv)
 {
-	yyin = fopen(argv[1], "r");
-	yyparse();
+	assert(argc > 1);
+	setRand();
+	if(checkFileName(argv[1]))
+	{
+		FILE *file = fopen(argv[1], "r");
+		yyin = file;
+		yyparse();
+		fclose(file);
+	} else {
+		fprintf(stderr, "This interpreter only handels frogs! Quack\n");
+	}
 
+	return 0;
 
 }
 

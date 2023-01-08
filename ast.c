@@ -1,7 +1,6 @@
 #include "ast.h"
 
 int nodeCounter = 0;
-var_stack stack;
 int l = 0;
 function_stack f_stack;
 callParams p_stack;
@@ -76,6 +75,10 @@ void printTree(ast_node *root, Agraph_t *graph, Agnode_t *node)
 		case LOGICAL: name = concatenateString("LOGICAL", root->op); break;
 		case WHILE: name = concatenateString("WHILE", ""); break;
 		case INCDEC: name = concatenateString("INCDEC", root->op); break;
+		case FOR: name = concatenateString("FOR", ""); break;
+		case GETINT: name = concatenateString("GETINT", ""); break;
+		case GETREAL: name = concatenateString("GETREAL", ""); break;
+		case GETRAND: name = concatenateString("GETRAND", ""); break;
 		default: name = "Unknown Node";printf("Unknown node in printing\n"); return; 
 	}
 
@@ -104,38 +107,71 @@ void printTree(ast_node *root, Agraph_t *graph, Agnode_t *node)
 
 value_t execute(ast_node *root)
 {	
-	value_t val;
-	val.empty = 0;
+	value_t val = createEmpty();
 	if(root != NULL)
 	{	
 //	printf("Node type: %d\n", root->type);
 		switch(root->type)
 		{
-			case INSTRUCTIONS: execute(root->childNodes[0]); execute(root->childNodes[1]); break;
-			case INCDEC: val = execute(root->childNodes[0]); char *id = strdup(val.m_id); val = incdec(root->op, val); var_set(&stack, val, id); break; 
+			case INSTRUCTIONS: { 
+						execute(root->childNodes[0]); 
+						if(checkScope(root->childNodes[1])){ enter_block(); } execute(root->childNodes[1]); if(checkScope(root->childNodes[1])){ leave_block(); } break;
+					   }
+
+			case INCDEC: val = execute(root->childNodes[0]); char *id = strdup(val.m_id); val = incdec(root->op, val); var_set(val, id); break; 
+			
 			case LOGICAL: val.m_flag = root->childNodes[0]->val.m_flag; val.m_int = determineLogical(root->op, execute(root->childNodes[0]), execute(root->childNodes[1])); return val;
+			
 			case IF: val = execute(root->childNodes[0]); if(val.m_int){ execute(root->childNodes[1]); } else if(root->childNodes[3]) { execute(root->childNodes[3]); } break;
+			
 			case ELSE: execute(root->childNodes[0]); break;
-			case WHILE: /*val = execute(root->childNodes[0]);*/ do { execute(root->childNodes[1]); val = execute(root->childNodes[0]); } while(val.m_int); break;
-			case FUNC: enter_func(&stack); execute(root->childNodes[0]); var_dump(&stack); setParams(); resetParams(); execute(root->childNodes[1]); var_dump(&stack); leave_func(&stack); break;
-			case DECLARATION: val = createEmpty(); val.m_flag = root->val.m_flag; var_declare(&stack, val, root->val.m_id); break;
-			case DEFINITION: execute(root->childNodes[0]); val = execute(root->childNodes[1]); var_set(&stack, val, root->childNodes[0]->val.m_id); break; 
+			
+			case FOR: execute(root->childNodes[0]); val = execute(root->childNodes[1]); if(val.m_int) { while(val.m_int) { enter_block(); execute(root->childNodes[3]); execute(root->childNodes[2]); val = execute(root->childNodes[1]); leave_block(); } } break;
+	
+			case WHILE: do { enter_block(); execute(root->childNodes[1]); val = execute(root->childNodes[0]); leave_block(); } while(val.m_int); break;
+			
+			case FUNC: enter_func(); execute(root->childNodes[0]); var_dump(); setParams(); resetParams(); execute(root->childNodes[1]); var_dump(); leave_func(); break;
+			
+			case DECLARATION: val = createEmpty(); val.m_flag = root->val.m_flag; val.m_id = strdup(root->val.m_id); var_declare(val); return val;
+			
+			case DEFINITION: {     
+					 	value_t dest = execute(root->childNodes[0]); value_t source = execute(root->childNodes[1]); 
+					 	val = assignement(dest, source); var_set(val, dest.m_id); break; 
+					 }			
+
 			case RVALUE: val = execute(root->childNodes[0]); return val;
-			case ID:  val = var_get(&stack, root->val.m_id); val.empty = 0; return val;
-			case INT: root->val.empty = 0; return root->val;
+			
+			case ID:  val = var_get(root->val.m_id); return val;
+			
+			case INT: return root->val;
+			
 			case PLUS: {
 					value_t op1 = execute(root->childNodes[0]); value_t op2 = execute(root->childNodes[1]); val = plusOperation(op1, op2); return val; 
+				   
 				   }  
+			
 			case PRINT: val = execute(root->childNodes[0]); printExpression(val); break; 
-			case STRING: root->val.empty = 0; return root->val;
-			case REAL: root->val.empty = 0; return root->val;
+			
+			case STRING: return root->val;
+			
+			case REAL: return root->val;
+			
 			case FUNCTIONCALL: { /*dumpFunctions();*/ ast_node *node = getFunction(root->val.m_id); execute(root->childNodes[0]); dumpParams(); execute(node); break; }
+			
 			case FUNCPARAMS: execute(root->childNodes[0]); execute(root->childNodes[1]); break;
+			
 			case CALLPARAMS: { 
 					   if(root->childNodes[0]) { val = execute(root->childNodes[0]); printf("Adding variable\n"); pushParam(val); }  
 					   if(root->childNodes[1]) { val = execute(root->childNodes[1]); printf("Adding variable\n"); pushParam(val); } 
 					   break; 
 					 } 
+			
+			case GETINT: val.m_flag = intType; val.m_int = getInt(); return val;
+			
+			case GETREAL: val.m_flag = realType; val.m_real = getReal(); return val;
+	
+			case GETRAND: val.m_flag = intType; val.m_int = getRand(); return val;
+	
 			default: printf("Unknown Node in executing\n"); break;
 
 		}
@@ -143,6 +179,19 @@ value_t execute(ast_node *root)
 
 	val.empty = 1;	
 	return val;	
+
+}
+
+int checkScope(ast_node *root)
+{
+
+	if(root && (root->blockScoped == 1))
+	{
+
+		return 1;
+
+	}
+	return 0;
 
 }
 
@@ -166,6 +215,31 @@ value_t plusOperation(value_t op1, value_t op2)
 	value_t val;
 	val.m_flag = op1.m_flag;
 	val.m_int = op1.m_int + op2.m_int;
+	return val;
+
+
+}
+
+value_t assignement(value_t dest, value_t source)
+{
+
+	value_t val = createEmpty();
+	if(dest.m_flag != source.m_flag)
+	{
+
+		fprintf(stderr, "Assignement between different data types is illegal\n");
+		exit(1);	
+
+	}
+	switch(dest.m_flag)
+	{
+
+		case intType: val.m_int = source.m_int; val.m_flag = intType; return val;
+		case realType: val.m_real = source.m_real; val.m_flag = realType; return val;
+		case stringType: val.m_string = strdup(source.m_string); val.m_flag = stringType; return val;
+		default: return val;
+	}
+
 	return val;
 
 
@@ -260,11 +334,13 @@ value_t createEmpty()
 {
 
 	value_t val;
+	val.m_id = NULL;
 	val.m_int = 0;
 	val.m_real = 0;
 	val.m_string = NULL;
 	val.m_flag = 0;
 	val.scopeBorder = 0;
+	val.empty = 0;
 	return val;
 
 }
@@ -372,7 +448,7 @@ void dumpParams()
 void setParams()
 {
 
-	int j = getTopFunctionSize(&stack);
+	int j = getTopFunctionSize();
 	int k = getParamsSize();
 //	printf("Amount func stack: %d Amount param stack %d\n", j, k);	
 	if( j != k)
@@ -382,12 +458,95 @@ void setParams()
 		exit(1);
 
 	}
-	var_set_function(&stack, p_stack.vals, p_stack.size);
+	var_set_function(p_stack.vals, p_stack.size);
 }
 
 int getParamsSize()
 {
 
 	return p_stack.size;
+
+}
+
+
+int getInt()
+{
+
+	char buffer[100];
+	printf("< ");
+	char *s = fgets(buffer, sizeof(buffer), stdin);
+  	if (s == NULL) 
+	{
+    		
+		printf("EOF\n");
+    		exit(1);
+  	
+	}
+  	
+	return atoi(s);
+
+}
+
+float getReal()
+{
+	srand(time(NULL));
+	char buffer[100];
+	printf("< ");
+	char *s = fgets(buffer, sizeof(buffer), stdin);
+  	if (s == NULL) 
+	{
+    
+		printf("EOF\n");
+    		exit(1);
+  
+	}
+  	return atof(s);
+
+}
+
+
+int getRand()
+{
+	
+	return rand();
+
+}
+
+void setRand()
+{
+
+	srand(time(NULL));
+
+}
+
+
+void freeTree(ast_node *root)
+{	
+	
+	for(int i = 0; i < MAXCHILDREN; i++)
+	{
+	
+		if(root->childNodes[i])
+		{
+
+			freeTree(root->childNodes[i]);
+
+		}
+
+	}
+
+	if(root->funcName)
+		free(root->funcName);
+	if(root->op)
+		free(root->op);
+
+	if(root->val.m_string)
+		free(root->val.m_string);
+	
+	if(root->val.m_id)
+		free(root->val.m_id);
+
+	free(root);
+	
 
 }

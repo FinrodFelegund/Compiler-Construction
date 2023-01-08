@@ -2,11 +2,15 @@
 #include <stdlib.h>
 #include <graphviz/gvc.h>
 #include <string.h>
+#include <time.h>
 #include "symbols.h"
 
 
 
-enum node_types {ID = 0, INT = 1, REAL = 2, STRING = 3, PRINT = 4, PLUS = 5, MIN = 6, MUL = 7, DIV = 8, FUNC = 9, FUNCS = 10, DECLARATION = 12, DEFINITION = 13, RVALUE = 14, FUNCTIONCALL = 15, FUNCPARAMS = 16, CALLPARAMS = 17, MORE = 18, LESS = 19, EQU = 20, LESSEQU = 21, MOREEQU = 22, IF = 23, INSTRUCTIONS = 24, NOTEQU = 25, LOGICAL = 26, ELSE = 27, WHILE = 28, INCDEC = 29 };
+enum node_types {ID = 0, INT = 1, REAL = 2, STRING = 3, PRINT = 4, PLUS = 5, MIN = 6, MUL = 7, DIV = 8, FUNC = 9, FUNCS = 10, 
+	         DECLARATION = 12, DEFINITION = 13, RVALUE = 14, FUNCTIONCALL = 15, FUNCPARAMS = 16, CALLPARAMS = 17, MORE = 18, LESS = 19, EQU = 20, 
+                 LESSEQU = 21, MOREEQU = 22, IF = 23, INSTRUCTIONS = 24, NOTEQU = 25, LOGICAL = 26, ELSE = 27, WHILE = 28, INCDEC = 29, FOR = 30, 
+	         GETINT = 31, GETREAL = 32, GETRAND = 33 };
 typedef enum node_types node_type;
 
 
@@ -21,7 +25,7 @@ struct ast_node {
 	struct ast_node *childNodes[MAXCHILDREN];
 	//for functions
 	char *funcName;
-	int scope;
+	int blockScoped;
 	char *op;
 };
 
@@ -32,9 +36,12 @@ ast_node *new_node(int type);
 void print(ast_node *root);
 void printTree(ast_node *root, Agraph_t *graph, Agnode_t *node);
 value_t execute(ast_node *root);
+void freeTree(ast_node *root);
+int checkScope(ast_node *root);
 value_t createEmpty();
 char *getDataType(value_t val);
 
+value_t assignement(value_t dest, value_t source);
 value_t plusOperation(value_t op1, value_t op2);
 value_t incdec(char *op, value_t op1);
 int determineLogical(char *op, value_t op1, value_t op2);
@@ -80,3 +87,12 @@ void setParams();
 int getParamsSize();
 
 // --- CALLING PARAMETER
+
+// --- GET FUNCTIONS ---
+
+int getInt();
+float getReal();
+int getRand();
+void setRand();
+
+// --- GET FUNCTIONS ---

@@ -1,0 +1,13 @@
+
+
+func main()
+{
+
+	
+	int a = getRand();
+	print(a);
+	int c = 15;
+	c = a;
+		               
+
+}

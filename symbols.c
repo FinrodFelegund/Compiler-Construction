@@ -1,14 +1,19 @@
 #include "symbols.h"
 
+var_stack stack_l;
+var_stack stack_g;
+
 void printVariable(value_t val)
 {
 	
 	if(val.scopeBorder)
-	{
-		printf("%d ", val.scopeBorder);
-		printf("Hit scopeborder\n");
-		return;
-
+	{	
+		switch(val.scopeBorder)
+		{
+			case func_border: printf("%s \n", "Function Border"); return;
+			case block_border: printf("%s \n", "Block Border"); return;
+			default: return;
+		}
 	}
 		
 	if(val.m_id == NULL)
@@ -28,51 +33,77 @@ void printVariable(value_t val)
 
 }
 
-void stack_push(var_stack *st, value_t val)
+void stack_push(value_t val)
 {	
-	st->vals = realloc(st->vals, (st->size + 1) * sizeof(value_t));
-	st->vals[st->size++] = val;
+	stack_l.vals = realloc(stack_l.vals, (stack_l.size + 1) * sizeof(value_t));
+	stack_l.vals[stack_l.size++] = val;
 }
 
-void enter_func(var_stack *st)
+void enter_func()
 {	
 //	printf("Entering function\n");
 	value_t val;
 	val.m_id = "";
-	val.scopeBorder = 1;
-	stack_push(st, val);
+	val.scopeBorder = func_border;
+	stack_push(val);
 
 }
 
 
-void leave_func(var_stack *st)
+void leave_func()
 {
 //	printf("Leaving function\n");
-	int i = st->size - 1;
+	int i = stack_l.size - 1;
 	for(; i >= 0; i--)
 	{
 
-		if(st->vals[i].scopeBorder == 1)
+		if(stack_l.vals[i].scopeBorder == func_border)
 			break;
 
 	}
-	st->size = i;
+	stack_l.size = i;
 }
 
-value_t *lookUp(var_stack *st, char *id)
+void enter_block()
 {
-	
-	int i = st->size - 1;
+
+	value_t val;
+	val.m_id = "";
+	val.scopeBorder = block_border;
+	stack_push(val);
+
+}
+
+void leave_block()
+{
+
+	int i = stack_l.size - 1;
 	for(; i >= 0; i--)
 	{
-		if(st->vals[i].scopeBorder == 1)
+
+		if(stack_l.vals[i].scopeBorder == block_border)
+			break;
+
+	}
+	stack_l.size = i;
+
+
+}
+
+value_t *lookUp(char *id)
+{
+	
+	int i = stack_l.size - 1;
+	for(; i >= 0; i--)
+	{
+		if(stack_l.vals[i].scopeBorder == 1)
 		{
 
 			return NULL;
 
 		}
-		if(strcmp(st->vals[i].m_id, id) == 0)
-			return &st->vals[i];
+		if(strcmp(stack_l.vals[i].m_id, id) == 0)
+			return &stack_l.vals[i];
 
 	}
 
@@ -80,28 +111,27 @@ value_t *lookUp(var_stack *st, char *id)
 
 }
 
-void var_declare(var_stack *st, value_t val, char *id)
+void var_declare(value_t val)
 {
-	value_t *v = lookUp(st, id);
+	value_t *v = lookUp(val.m_id);
 	if(v)
 	{
 
-		fprintf(stderr, "Redeclaration of variable \"%s\" not allowed\n", id);
-		var_dump(st);
+		fprintf(stderr, "Redeclaration of variable \"%s\" not allowed\n", val.m_id);
+		var_dump();
 		exit(1);
 
 	}
 	
 //	printf("Assigning %d to %s\n", val.m_int, id);	
-	val.m_id = strdup(id);
-	stack_push(st, val);
+	stack_push(val);
 	
 }
 
-void var_set(var_stack *st, value_t val, char *id)
+void var_set(value_t val, char *id)
 {
 
-	value_t *v = lookUp(st, id);
+	value_t *v = lookUp(id);
 	//printf("Type: %d\n", val.m_flag);
 	if(v)
 	{
@@ -117,10 +147,10 @@ void var_set(var_stack *st, value_t val, char *id)
 
 }
 
-value_t var_get(var_stack *st, char *id)
+value_t var_get(char *id)
 {
 
-	value_t *val = lookUp(st, id);
+	value_t *val = lookUp(id);
 	if(val)
 	{
 
@@ -134,13 +164,13 @@ value_t var_get(var_stack *st, char *id)
 
 }
 
-void var_dump(var_stack *st)
+void var_dump()
 {
 	printf("-- Top -- \n");
-	int i = st->size - 1;
+	int i = stack_l.size - 1;
 	for(; i >= 0; i--)
 	{
-		if(st->vals[i].scopeBorder)
+		if(stack_l.vals[i].scopeBorder)
 		{
 
 			printf("%d: End of function\n", i);
@@ -148,7 +178,7 @@ void var_dump(var_stack *st)
 		} else  
 		{
 			printf("%d: ", i);
-			printVariable(st->vals[i]);
+			printVariable(stack_l.vals[i]);
 		}
 	}
 	printf("-- Bottom --\n\n");
@@ -156,15 +186,15 @@ void var_dump(var_stack *st)
 
 }
 
-int getTopFunctionSize(var_stack *st)
+int getTopFunctionSize()
 {
 
-	int i = st->size - 1;
+	int i = stack_l.size - 1;
 	int counter = 0;
 	for(; i >= 0; i--)
 	{
 
-		if(st->vals[i].scopeBorder)
+		if(stack_l.vals[i].scopeBorder)
 		{
 			return counter;
 		}
@@ -174,10 +204,10 @@ int getTopFunctionSize(var_stack *st)
 
 }
 
-void var_set_function(var_stack *st, value_t *vals, int size)
+void var_set_function(value_t *vals, int size)
 {
 
-	int top = st->size - 1;
+	int top = stack_l.size - 1;
 	int i = size - 1;
 	for(; i >= 0; i--)
 	{
@@ -185,9 +215,9 @@ void var_set_function(var_stack *st, value_t *vals, int size)
 		switch(vals[i].m_flag)
 		{
 
-			case intType: st->vals[top].m_int = vals[i].m_int; break;
-			case realType: st->vals[top].m_real = vals[i].m_real; break;
-			case stringType: st->vals[top].m_string = strdup(vals[i].m_string); break;
+			case intType: stack_l.vals[top].m_int = vals[i].m_int; break;
+			case realType: stack_l.vals[top].m_real = vals[i].m_real; break;
+			case stringType: stack_l.vals[top].m_string = strdup(vals[i].m_string); break;
 			default: break;
 
 		}

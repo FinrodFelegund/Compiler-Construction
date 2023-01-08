@@ -124,10 +124,12 @@ REAL "0"|[0-9]+"."[0-9]+
 "if"      { return _IF; }
 "else"    { return _ELSE; }
 "while"   { return _WHILE; }
+"for"     { return _FOR; }
 "+"       { return PLUOP; }
 "-"       { return MINOP; }
 "*"       { return MULOP; }
 "/"       { return DIVOP; }
+"%"       { return MODULO; }
 "++"      { return INCR; }
 "--"      { return DECR; }
 "=="      { return _EQU; }
