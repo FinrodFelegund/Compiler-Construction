@@ -1,13 +1,11 @@
-
+func test(int a, int b)
+{
+	print(a + b);
+}
 
 func main()
 {
 
-	
-	int a = getRand();
-	print(a);
-	int c = 15;
-	c = a;
-		               
+        test(5, 10);		               
 
 }

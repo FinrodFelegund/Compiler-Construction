@@ -161,8 +161,8 @@ value_t execute(ast_node *root)
 			case FUNCPARAMS: execute(root->childNodes[0]); execute(root->childNodes[1]); break;
 			
 			case CALLPARAMS: { 
-					   if(root->childNodes[0]) { val = execute(root->childNodes[0]); printf("Adding variable\n"); pushParam(val); }  
-					   if(root->childNodes[1]) { val = execute(root->childNodes[1]); printf("Adding variable\n"); pushParam(val); } 
+					   if(root->childNodes[0]) { val = execute(root->childNodes[0]); printf("Adding variable %d\n", val.m_int); pushParam(val); }  
+					   else if(root->childNodes[1]) { val = execute(root->childNodes[1]); printf("Adding variable %d\n", val.m_int); pushParam(val); } 
 					   break; 
 					 } 
 			
@@ -177,7 +177,6 @@ value_t execute(ast_node *root)
 		}
 	}
 
-	val.empty = 1;	
 	return val;	
 
 }
@@ -340,7 +339,6 @@ value_t createEmpty()
 	val.m_string = NULL;
 	val.m_flag = 0;
 	val.scopeBorder = 0;
-	val.empty = 0;
 	return val;
 
 }
@@ -407,11 +405,7 @@ void dumpFunctions()
 
 void pushParam(value_t val)
 {
-	if(val.empty)
-	{
-		printf("Empty val: %d\n", val.empty);
-		return;
-	}
+
 	p_stack.vals = realloc(p_stack.vals, (p_stack.size + 1) * sizeof(value_t));
 	p_stack.vals[p_stack.size++] = val;
 

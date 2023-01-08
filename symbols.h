@@ -15,7 +15,7 @@ typedef struct
 	char *m_string;
 	types m_flag;
 	int scopeBorder;
-	int empty;
+
 
 
 } value_t;
