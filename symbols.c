@@ -36,7 +36,8 @@ void printVariable(value_t val)
 void stack_push(value_t val)
 {	
 	stack_l.vals = realloc(stack_l.vals, (stack_l.size + 1) * sizeof(value_t));
-	stack_l.vals[stack_l.size++] = val;
+	stack_l.vals[stack_l.used++] = val;
+	stack_l.size++;
 }
 
 void enter_func()
@@ -53,7 +54,7 @@ void enter_func()
 void leave_func()
 {
 //	printf("Leaving function\n");
-	int i = stack_l.size - 1;
+	int i = stack_l.used - 1;
 	for(; i >= 0; i--)
 	{
 
@@ -61,7 +62,7 @@ void leave_func()
 			break;
 
 	}
-	stack_l.size = i;
+	stack_l.used = i;
 }
 
 void enter_block()
@@ -77,7 +78,7 @@ void enter_block()
 void leave_block()
 {
 
-	int i = stack_l.size - 1;
+	int i = stack_l.used - 1;
 	for(; i >= 0; i--)
 	{
 
@@ -85,7 +86,7 @@ void leave_block()
 			break;
 
 	}
-	stack_l.size = i;
+	stack_l.used = i;
 
 
 }
@@ -93,7 +94,7 @@ void leave_block()
 value_t *lookUp(char *id)
 {
 	
-	int i = stack_l.size - 1;
+	int i = stack_l.used - 1;
 	for(; i >= 0; i--)
 	{
 		if(stack_l.vals[i].scopeBorder == 1)
@@ -167,7 +168,7 @@ value_t var_get(char *id)
 void var_dump()
 {
 	printf("-- Top -- \n");
-	int i = stack_l.size - 1;
+	int i = stack_l.used - 1;
 	for(; i >= 0; i--)
 	{
 		if(stack_l.vals[i].scopeBorder)
@@ -189,7 +190,7 @@ void var_dump()
 int getTopFunctionSize()
 {
 
-	int i = stack_l.size - 1;
+	int i = stack_l.used - 1;
 	int counter = 0;
 	for(; i >= 0; i--)
 	{
@@ -207,7 +208,7 @@ int getTopFunctionSize()
 void var_set_function(value_t *vals, int size)
 {
 
-	int top = stack_l.size - 1;
+	int top = stack_l.used - 1;
 	int i = size - 1;
 	for(; i >= 0; i--)
 	{
@@ -224,4 +225,23 @@ void var_set_function(value_t *vals, int size)
 		top--;
 	} 	
 
+}
+
+void freeStack()
+{
+	if(stack_l.vals)
+	{
+		int i = stack_l.size - 1;
+		for(; i >= 0; i--)
+		{
+
+	/*		if(stack_l.vals[i].m_id)
+				free(stack_l.vals[i].m_id);
+			if(stack_l.vals[i].m_string)
+				free(stack_l.vals[i].m_string);	*/
+		}
+	stack_l.size = stack_l.used = 0;
+	//if(stack_l.vals)
+	//	free(stack_l.vals);
+	}
 }

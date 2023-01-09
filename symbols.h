@@ -15,7 +15,7 @@ typedef struct
 	char *m_string;
 	types m_flag;
 	int scopeBorder;
-
+	int empty;
 
 
 } value_t;
@@ -25,6 +25,7 @@ typedef struct
 
 	value_t *vals;
 	int size;
+	int used;
 
 } var_stack;
 
@@ -41,7 +42,7 @@ void var_dump();
 void printVariable(value_t val);
 int getTopFunctionSize();
 void var_set_function(value_t *vals, int size);
-
+void freeStack();
 
 
 

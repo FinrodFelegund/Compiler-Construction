@@ -4,11 +4,22 @@ int nodeCounter = 0;
 int l = 0;
 function_stack f_stack;
 callParams p_stack;
+value_t returnVal;
+int returnSignal = 0;
+
 
 ast_node *new_node(int type)
 {
         ast_node *node = (ast_node*)malloc(sizeof(ast_node));
         node->type = type;
+	node->funcName = NULL;
+	node->blockScoped = 0;
+	node->op = NULL;
+	node->val.m_id = NULL;
+	node->val.m_int = 0;
+	node->val.m_real = 0;
+	node->val.m_string = NULL;
+	node->val.scopeBorder = 0;
         return node;
  
 }
@@ -62,7 +73,7 @@ void printTree(ast_node *root, Agraph_t *graph, Agnode_t *node)
 		case DIV: name = concatenateString("DIV", ""); break;
 		case FUNC: name = concatenateString("FUNC", root->funcName); break;
 		case FUNCS: name = concatenateString("FUNCS", ""); break;
-//		case EXPRESSIONS: name = concatenateString("EXPRESSIONS", ""); break;
+		case ARITHMETIC: name = concatenateString("ARITHMETIC", root->op); break;
 		case DEFINITION: name = concatenateString("DEFINITION", ""); break;
 		case RVALUE: name = concatenateString("RVALUE", ""); break;
 		case DECLARATION: name = concatenateString("DECLARATION", getDataType(root->val)); name = concatenateString(name, root->val.m_id); break;
@@ -79,6 +90,7 @@ void printTree(ast_node *root, Agraph_t *graph, Agnode_t *node)
 		case GETINT: name = concatenateString("GETINT", ""); break;
 		case GETREAL: name = concatenateString("GETREAL", ""); break;
 		case GETRAND: name = concatenateString("GETRAND", ""); break;
+		case RETURN: name = concatenateString("RETURN", ""); break;
 		default: name = "Unknown Node";printf("Unknown node in printing\n"); return; 
 	}
 
@@ -113,8 +125,9 @@ value_t execute(ast_node *root)
 //	printf("Node type: %d\n", root->type);
 		switch(root->type)
 		{
-			case INSTRUCTIONS: { 
+			case INSTRUCTIONS: {    if(returnSignal) break;
 						execute(root->childNodes[0]); 
+						if(returnSignal) break;
 						if(checkScope(root->childNodes[1])){ enter_block(); } execute(root->childNodes[1]); if(checkScope(root->childNodes[1])){ leave_block(); } break;
 					   }
 
@@ -130,7 +143,7 @@ value_t execute(ast_node *root)
 	
 			case WHILE: do { enter_block(); execute(root->childNodes[1]); val = execute(root->childNodes[0]); leave_block(); } while(val.m_int); break;
 			
-			case FUNC: enter_func(); execute(root->childNodes[0]); var_dump(); setParams(); resetParams(); execute(root->childNodes[1]); var_dump(); leave_func(); break;
+			case FUNC: enter_func(); execute(root->childNodes[0]); /*var_dump();*/ setParams(); resetParams(); execute(root->childNodes[1]); /*var_dump();*/ if(!returnSignal){ leave_func(); } break;
 			
 			case DECLARATION: val = createEmpty(); val.m_flag = root->val.m_flag; val.m_id = strdup(root->val.m_id); var_declare(val); return val;
 			
@@ -145,10 +158,9 @@ value_t execute(ast_node *root)
 			
 			case INT: return root->val;
 			
-			case PLUS: {
-					value_t op1 = execute(root->childNodes[0]); value_t op2 = execute(root->childNodes[1]); val = plusOperation(op1, op2); return val; 
-				   
-				   }  
+			case ARITHMETIC: {
+						value_t op1 = execute(root->childNodes[0]); value_t op2 = execute(root->childNodes[1]); val = arithmeticOperation(root->op, op1, op2); return val; 
+				   	 }  
 			
 			case PRINT: val = execute(root->childNodes[0]); printExpression(val); break; 
 			
@@ -156,13 +168,13 @@ value_t execute(ast_node *root)
 			
 			case REAL: return root->val;
 			
-			case FUNCTIONCALL: { /*dumpFunctions();*/ ast_node *node = getFunction(root->val.m_id); execute(root->childNodes[0]); dumpParams(); execute(node); break; }
+			case FUNCTIONCALL: { /*dumpFunctions();*/ ast_node *node = getFunction(root->val.m_id); execute(root->childNodes[0]); /*dumpParams();*/ execute(node); if(returnSignal){ leave_func(); returnSignal = 0; } val = getReturnVal(); return val; }
 			
 			case FUNCPARAMS: execute(root->childNodes[0]); execute(root->childNodes[1]); break;
 			
 			case CALLPARAMS: { 
-					   if(root->childNodes[0]) { val = execute(root->childNodes[0]); printf("Adding variable %d\n", val.m_int); pushParam(val); }  
-					   else if(root->childNodes[1]) { val = execute(root->childNodes[1]); printf("Adding variable %d\n", val.m_int); pushParam(val); } 
+					   if(root->childNodes[0]) { val = execute(root->childNodes[0]); pushParam(val); }  
+					   if(root->childNodes[1]) { val = execute(root->childNodes[1]); pushParam(val); } 
 					   break; 
 					 } 
 			
@@ -172,11 +184,13 @@ value_t execute(ast_node *root)
 	
 			case GETRAND: val.m_flag = intType; val.m_int = getRand(); return val;
 	
+			case RETURN: if(root->childNodes[0]) { setReturnVal(execute(root->childNodes[0])); returnSignal = 1;  /*var_dump();*/ } break; 
+
 			default: printf("Unknown Node in executing\n"); break;
 
 		}
 	}
-
+	val.empty = 1;
 	return val;	
 
 }
@@ -199,24 +213,79 @@ void printExpression(value_t val)
 	switch(val.m_flag)
 	{
 
-		case intType: printf("> %d\n", val.m_int); break;
-		case realType: printf("> %f\n", val.m_real); break;
-		case stringType: printf(">> %s\n", val.m_string); break;
+		case intType: printf("%d", val.m_int); break;
+		case realType: printf("%f", val.m_real); break;
+		case stringType: printf("%s", val.m_string); break;
 		default: break;
 	}
 
 
 }
 
-value_t plusOperation(value_t op1, value_t op2)
+char *concate(char *op1, char *op2)
 {
+	
+	int size = strlen(op1) + strlen(op2) + 1;
+        char *dst = malloc(size);
+        strcpy(dst, op1);
+        strcat(dst, op2);
+        return dst;
 
-	value_t val;
-	val.m_flag = op1.m_flag;
-	val.m_int = op1.m_int + op2.m_int;
+}
+
+value_t arithmeticOperation(char *op, value_t op1, value_t op2)
+{
+	//printf("Arithmetic operation: %s\n", op);
+	value_t val = createEmpty();
+
+
+	if(op1.m_flag != op2.m_flag)
+	{
+
+		fprintf(stderr, "Arithmetic operations with different datatypes is illegal\n");
+		exit(1);
+
+	}
+
+	if(op1.m_flag == stringType)
+        {
+		val.m_flag = stringType;
+                if(strcmp(op, "+") == 0)
+		{ 
+			val.m_string = concate(op1.m_string, op2.m_string);
+			return val;
+          	} else 
+		{
+			fprintf(stderr, "Operations other than + are not allowed on strings\n");
+			exit(1);
+		}        
+	}
+	
+	if(op1.m_flag == intType)
+	{
+		
+		val.m_flag = intType;
+		if(strcmp(op, "+") == 0) val.m_int = op1.m_int + op2.m_int;
+		if(strcmp(op, "-") == 0) val.m_int = op1.m_int - op2.m_int; 
+		if(strcmp(op, "*") == 0) val.m_int = op1.m_int * op2.m_int;
+		if(strcmp(op, "/") == 0) val.m_int = op1.m_int / op2.m_int; 
+		if(strcmp(op, "%") == 0) val.m_int = op1.m_int % op2.m_int;
+		
+	}
+
+
+	if(op1.m_flag == realType)
+	{
+		val.m_flag = realType;
+		if(strcmp(op, "+") == 0) val.m_real = op1.m_real + op2.m_real;
+		if(strcmp(op, "-") == 0) val.m_real = op1.m_real - op2.m_real; 
+		if(strcmp(op, "*") == 0) val.m_real = op1.m_real * op2.m_real;
+		if(strcmp(op, "/") == 0) val.m_real = op1.m_real / op2.m_real;
+		if(strcmp(op, "%") == 0) fprintf(stderr, "Modulo operand on real types is illegal\n"); exit(1);
+	}
+	
+
 	return val;
-
-
 }
 
 value_t assignement(value_t dest, value_t source)
@@ -339,6 +408,7 @@ value_t createEmpty()
 	val.m_string = NULL;
 	val.m_flag = 0;
 	val.scopeBorder = 0;
+	val.empty = 0;
 	return val;
 
 }
@@ -405,7 +475,12 @@ void dumpFunctions()
 
 void pushParam(value_t val)
 {
+	if(val.empty)
+	{
 
+		return;
+
+	}
 	p_stack.vals = realloc(p_stack.vals, (p_stack.size + 1) * sizeof(value_t));
 	p_stack.vals[p_stack.size++] = val;
 
@@ -415,12 +490,19 @@ void resetParams()
 {		
 	if(p_stack.vals)
 	{
+		
+		for(int i = 0; i < p_stack.size; i++)
+		{
+//			if(p_stack.vals[i].m_id)
+//				free(p_stack.vals[i].m_id);
+//			if(p_stack.vals[i].m_string)
+//				free(p_stack.vals[i].m_string);	
+	
+		}	
 
-		free(p_stack.vals);
-		p_stack.vals = NULL;
-
-	}
+//	free(p_stack.vals);
 	p_stack.size = 0;
+	}
 }
 
 void dumpParams()
@@ -541,6 +623,22 @@ void freeTree(ast_node *root)
 		free(root->val.m_id);
 
 	free(root);
-	
+	freeStack();	
+
+}
+
+
+void setReturnVal(value_t val)
+{
+
+	returnVal = val;
+
+}
+
+
+value_t getReturnVal()
+{
+
+	return returnVal;
 
 }

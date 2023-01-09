@@ -121,6 +121,7 @@ REAL "0"|[0-9]+"."[0-9]+
 "string"  { return _STRING; }
 
 "func"    { return _FUNC; }
+"return"  { return _RETURN; }
 "if"      { return _IF; }
 "else"    { return _ELSE; }
 "while"   { return _WHILE; }

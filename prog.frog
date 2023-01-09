@@ -1,11 +1,90 @@
-func test(int a, int b)
+
+func multTable()
 {
-	print(a + b);
+
+	int n = getInt();
+	int i;
+	int j;
+	for(i = 1; i <= n; i++)
+	{
+
+		for(j = 1; j <= n; j++)
+		{
+
+			print(i * j);
+			print(" ");
+		}
+		print("\nl");
+	}
+		
 }
+
+func guessMyNumber()
+{
+
+	int kill = 1;
+	int rand = 0;
+	int input = 11;
+	
+	while(kill != 0)
+	{
+		rand = getRand() % 10;
+		
+		while(input != rand)
+		{
+
+			input = getInt();
+			if(input < rand)
+			{
+
+				print("too low\nl");
+
+			}
+			if(input > rand)
+			{
+
+				print("too high\nl");
+
+			}	
+		}
+		print("Congratulations, play again? 0 for quit - else new round\nl");
+		kill = getInt();
+	}
+}
+
+
+
+
+
+func fib(int n)
+{
+
+	if(n <= 1)
+	{
+
+		return n;
+
+	}
+	return fib(n-1) + fib(n - 2);
+}
+
+
 
 func main()
 {
+	
 
-        test(5, 10);		               
+	int o = 9;
+	print(fib(o));
 
+	print("\nl");	
+
+	multTable();
+		
+	print("\nl");
+	
+
+	guessMyNumber();
+	
+	
 }

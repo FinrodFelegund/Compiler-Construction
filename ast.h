@@ -10,7 +10,7 @@
 enum node_types {ID = 0, INT = 1, REAL = 2, STRING = 3, PRINT = 4, PLUS = 5, MIN = 6, MUL = 7, DIV = 8, FUNC = 9, FUNCS = 10, 
 	         DECLARATION = 12, DEFINITION = 13, RVALUE = 14, FUNCTIONCALL = 15, FUNCPARAMS = 16, CALLPARAMS = 17, MORE = 18, LESS = 19, EQU = 20, 
                  LESSEQU = 21, MOREEQU = 22, IF = 23, INSTRUCTIONS = 24, NOTEQU = 25, LOGICAL = 26, ELSE = 27, WHILE = 28, INCDEC = 29, FOR = 30, 
-	         GETINT = 31, GETREAL = 32, GETRAND = 33 };
+	         GETINT = 31, GETREAL = 32, GETRAND = 33, ARITHMETIC = 34, RETURN = 35 };
 typedef enum node_types node_type;
 
 
@@ -42,7 +42,8 @@ value_t createEmpty();
 char *getDataType(value_t val);
 
 value_t assignement(value_t dest, value_t source);
-value_t plusOperation(value_t op1, value_t op2);
+char *concate(char *op1, char *op2);
+value_t arithmeticOperation(char *op, value_t op1, value_t op2);
 value_t incdec(char *op, value_t op1);
 int determineLogical(char *op, value_t op1, value_t op2);
 void printExpression(value_t val);
@@ -61,6 +62,7 @@ typedef struct
 
 	function_node *nodes;
 	int size;
+	int used;
 
 } function_stack;
 
@@ -96,3 +98,10 @@ int getRand();
 void setRand();
 
 // --- GET FUNCTIONS ---
+
+// --- RETURN ---
+
+void setReturnVal(value_t val);
+value_t getReturnVal();
+
+// --- RETURN ---
