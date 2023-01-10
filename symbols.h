@@ -60,6 +60,6 @@ int lookUpIntArray(intArray *arr, int pos);
 void freeIntArray(intArray *arr);
 intArray createEmptyIntArray();
 intArray copyIntArray(intArray *arr);
-
+void printArray(intArray *arr);
 
 

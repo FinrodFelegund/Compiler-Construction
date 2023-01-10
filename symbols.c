@@ -322,3 +322,18 @@ intArray copyIntArray(intArray *arr)
 	return val;
 	
 }
+
+void printArray(intArray *arr)
+{
+
+	int size = arr->size;
+	for(int i = 0; i < size; i++)
+	{
+
+		printf("%d ", arr->array[i]);
+
+	}
+	printf("\n");
+
+
+}

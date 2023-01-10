@@ -80,13 +80,13 @@ func doNothing()
 
 
 	
-	real d = 1.0;
+/*	real d = 1.0;
 	real f = 2.5;
 	real e = 3.5;
 	print(d);
 	return;
 	print(f);
-	print(e);
+	print(e);*/
 
 }
 
@@ -100,7 +100,10 @@ func main()
 	int i = 9;
 	print(fib(i));
 	print("\nl");
-	doNothing();
+	multTable();
+//	doNothing();
+	print("\nl");
+	guessMyNumber();
 	print("\nl");
 	
 }

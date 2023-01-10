@@ -168,8 +168,6 @@ RVALUE:     CONSTANT
 	  | GETFUNCTIONS
 	  
 	  
-
-	  
 GETFUNCTIONS: _GETINT  LPAREN RPAREN  { $$ = new_node(GETINT);  } 
 	    | _GETREAL LPAREN RPAREN  { $$ = new_node(GETREAL); }
 	    | _GETRAND LPAREN RPAREN  { $$ = new_node(GETRAND); }

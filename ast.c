@@ -154,7 +154,7 @@ value_t execute(ast_node *root)
 			case FUNC: 
 			{ 
 				enter_func(); execute(root->childNodes[0]); /*var_dump();*/ setParams(); resetParams(); 
-				execute(root->childNodes[1]); var_dump(); if(!returnSignal){ leave_func(); } break;	   
+				execute(root->childNodes[1]); /*var_dump();*/ if(!returnSignal){ leave_func(); } break;	   
 			}
 
 			case DECLARATION: val = createEmpty(); val.m_flag = root->val.m_flag; val.m_id = strdup(root->val.m_id); var_declare(val); return val;
@@ -271,6 +271,40 @@ value_t arithmeticOperation(char *op, value_t op1, value_t op2)
 	//printf("Arithmetic operation: %s\n", op);
 	value_t val = createEmpty();
 
+	if((op1.m_flag == intArrayType) && (op2.m_flag == intType))
+	{
+
+		if(op1.m_intArray.current == -1)
+		{
+			fprintf(stderr, "array name not availbale for arithmetic operations\n");
+			exit(1);
+		}
+		val.m_flag = intType;	
+		val.m_int = lookUpIntArray(&op1.m_intArray, op1.m_intArray.current) + op2.m_int;
+		return val;
+	
+	}
+
+	if((op1.m_flag == intType) && (op2.m_flag == intArrayType))
+	{
+
+
+		if(op2.m_intArray.current == -1)
+		{
+
+			fprintf(stderr, "array name not availbale for arithmetic operations\n");
+			exit(1);
+		
+		}
+		val.m_flag = intType;
+		val.m_int = op1.m_int + lookUpIntArray(&op2.m_intArray, op2.m_intArray.current);
+		return val;
+
+	
+	}
+
+
+
 
 	if(op1.m_flag != op2.m_flag)
 	{
@@ -315,6 +349,32 @@ value_t arithmeticOperation(char *op, value_t op1, value_t op2)
 		if(strcmp(op, "*") == 0) val.m_real = op1.m_real * op2.m_real;
 		if(strcmp(op, "/") == 0) val.m_real = op1.m_real / op2.m_real;
 		if(strcmp(op, "%") == 0) fprintf(stderr, "Modulo operand on real types is illegal\n"); exit(1);
+	}
+
+	if(op1.m_flag == intArrayType)
+	{
+
+		if((op1.m_intArray.current == -1) && (op2.m_intArray.current == -1))
+		{
+
+			val.m_flag = intArrayType;
+			int size = op1.m_intArray.size + op2.m_intArray.size;
+			val.m_intArray.array = malloc(size * sizeof(int));
+			val.m_intArray.size = size;
+			memcpy(val.m_intArray.array, op1.m_intArray.array, op1.m_intArray.size * sizeof(int));
+			memcpy(val.m_intArray.array + op1.m_intArray.size, op2.m_intArray.array, op2.m_intArray.size * sizeof(int));	
+			return val;
+		}
+
+		if((op1.m_intArray.current != -1) && (op2.m_intArray.current != -1))
+		{	
+			val.m_flag = intType;
+			val.m_int = lookUpIntArray(&op1.m_intArray, op1.m_intArray.current) + lookUpIntArray(&op2.m_intArray, op2.m_intArray.current);
+			return val;
+
+		}
+
+	
 	}
 	
 
@@ -369,8 +429,11 @@ value_t assignement(value_t dest, value_t source)
 
 			if((dest.m_intArray.current == -1) && (source.m_intArray.current == -1))
 			{ 	
-			
+//				printf("Assigning array to array\n");
+		//		printArray(&dest.m_intArray);
+		//		printArray(&source.m_intArray);	
 				val.m_intArray = copyIntArray(&source.m_intArray); val.m_flag = intArrayType; 
+		//		printArray(&val.m_intArray);
 				return val;
 				
 			} else if((dest.m_intArray.current != -1) && (source.m_intArray.current != -1))
@@ -613,7 +676,7 @@ void setParams()
 
 	int j = getTopFunctionSize();
 	int k = getParamsSize();
-	printf("Amount func stack: %d Amount param stack %d\n", j, k);	
+//	printf("Amount func stack: %d Amount param stack %d\n", j, k);	
 	if( j != k)
 	{
 	

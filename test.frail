@@ -3,6 +3,9 @@ func test(int array [] a)
 
 	print(a);
 	print("\nl");
+	int array [] b;
+	b[0] = 10;
+	return b;
 }
 
 
@@ -10,11 +13,22 @@ func main()
 {
 
 	int array [] a;
-	a[3] = 5;
-	a[2] = 9;
-	a[1] = 78;
-	test(a);
-
+	int array [] b;
+	int array [] c;
+	a[0] = 1;
+	a[1] = 2;
+//	print(a);
+	print("\nl");
+	b[0] = 3;
+	b[1] = 4;
+//	print(b);
+	print("\nl");
+	c = a + b;
+	print(c);
+	print("\nl");
+	int d = a[0] + b[1];
+	print(d);
+	print("\nl");
 
 
 }
