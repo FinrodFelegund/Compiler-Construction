@@ -5,11 +5,20 @@
 #define func_border 1
 #define block_border 2
 
-typedef enum { intType, realType, stringType } types;
+typedef enum { intType, realType, stringType, intArrayType } types;
 
 typedef struct
 {
+	int *array;
+	int current;
+	int size;
+} intArray;
+
+typedef struct
+{
+	
 	char *m_id;
+	intArray m_intArray;
 	int m_int;
 	float m_real;
 	char *m_string;
@@ -45,6 +54,12 @@ void var_set_function(value_t *vals, int size);
 void freeStack();
 
 
+
+void pushIntArray(intArray *arr, int pos, int val);
+int lookUpIntArray(intArray *arr, int pos);
+void freeIntArray(intArray *arr);
+intArray createEmptyIntArray();
+intArray copyIntArray(intArray *arr);
 
 
 

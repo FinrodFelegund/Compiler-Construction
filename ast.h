@@ -10,7 +10,7 @@
 enum node_types {ID = 0, INT = 1, REAL = 2, STRING = 3, PRINT = 4, PLUS = 5, MIN = 6, MUL = 7, DIV = 8, FUNC = 9, FUNCS = 10, 
 	         DECLARATION = 12, DEFINITION = 13, RVALUE = 14, FUNCTIONCALL = 15, FUNCPARAMS = 16, CALLPARAMS = 17, MORE = 18, LESS = 19, EQU = 20, 
                  LESSEQU = 21, MOREEQU = 22, IF = 23, INSTRUCTIONS = 24, NOTEQU = 25, LOGICAL = 26, ELSE = 27, WHILE = 28, INCDEC = 29, FOR = 30, 
-	         GETINT = 31, GETREAL = 32, GETRAND = 33, ARITHMETIC = 34, RETURN = 35 };
+	         GETINT = 31, GETREAL = 32, GETRAND = 33, ARITHMETIC = 34, RETURN = 35, ARRAY_DEC = 36, ARR_ID = 37 };
 typedef enum node_types node_type;
 
 

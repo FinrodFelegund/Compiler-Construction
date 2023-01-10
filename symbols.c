@@ -28,7 +28,8 @@ void printVariable(value_t val)
 		case intType: printf("%d\n", val.m_int); break;
 		case realType: printf("%f\n", val.m_real); break;
 		case stringType: printf("%s\n", val.m_string); break;
-
+		case intArrayType: printf("Int Array\n"); break;
+		default: return;
 	}
 
 }
@@ -142,7 +143,7 @@ void var_set(value_t val, char *id)
 			case intType: v->m_int = val.m_int; break;
 			case realType: v->m_real = val.m_real; break;
 			case stringType: v->m_string = (val.m_string); break;
-		
+			case intArrayType: v->m_intArray = val.m_intArray; break;
 		}
 	}
 
@@ -212,15 +213,21 @@ void var_set_function(value_t *vals, int size)
 	int i = size - 1;
 	for(; i >= 0; i--)
 	{
+		if(stack_l.vals[top].m_flag != vals[i].m_flag)
+		{
 
+			fprintf(stderr, "Calling parameter is different than function paramter\n");
+			exit(1);
+		
+		}
 		switch(vals[i].m_flag)
 		{
 
 			case intType: stack_l.vals[top].m_int = vals[i].m_int; break;
 			case realType: stack_l.vals[top].m_real = vals[i].m_real; break;
 			case stringType: stack_l.vals[top].m_string = strdup(vals[i].m_string); break;
+			case intArrayType: stack_l.vals[top].m_intArray = copyIntArray(&vals[i].m_intArray); break;
 			default: break;
-
 		}
 		top--;
 	} 	
@@ -244,4 +251,74 @@ void freeStack()
 	//if(stack_l.vals)
 	//	free(stack_l.vals);
 	}
+}
+
+
+void pushIntArray(intArray *arr, int pos, int val)
+{
+	if(arr->size == 0)
+	{
+		arr->size = 1;
+		arr->array = realloc(arr->array, sizeof(int));
+	//	printf("Initialized\n");	
+	}
+
+	if(pos >= arr->size)
+	{
+	//	printf("T\n");
+		int a[arr->size];
+		memcpy(a, arr->array, arr->size * sizeof(int));
+	//	for(int i = 0; i < arr->size; i++)
+	//		printf("%d ", a[i]);
+	//	printf("\n");
+		arr->array = realloc(arr->array, (pos + 1) * sizeof(int));
+		memset(arr->array, 0, (pos + 1) * sizeof(int));
+	//	for(int i = 0; i < pos + 1; i++)
+	//		printf("%d ", arr->array[i]);
+	//	printf("\n"); 
+		memcpy(arr->array, a, arr->size * sizeof(int));
+	//	for(int i = 0; i < pos + 1; i++)
+	//		printf("%d ", arr->array[i]);
+	//	printf("\n"); 
+		arr->size = pos + 1;
+	//	printf("T\n");
+	}
+
+	arr->array[pos] = val;
+}
+
+int lookUpIntArray(intArray *arr, int pos)
+{
+
+	if(arr->size <= pos)
+	{
+
+		return arr->array[arr->size - 1];
+
+	}
+	return arr->array[pos];
+
+
+}
+
+intArray createEmptyIntArray()
+{
+
+	intArray val;
+	val.size = 0;
+	val.current = -1;
+	val.array = NULL;
+	return val;
+
+}
+
+intArray copyIntArray(intArray *arr)
+{
+
+	intArray val = createEmptyIntArray();
+	val.array = malloc(arr->size * sizeof(int));
+	memcpy(val.array, arr->array, arr->size * sizeof(int));
+	val.size = arr->size;
+	return val;
+	
 }

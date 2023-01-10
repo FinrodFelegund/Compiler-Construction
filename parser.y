@@ -83,11 +83,12 @@ typedef struct
        _INT
        _REAL
        _STRING
+       _ARRAY
        _OR
        _AND
        _NOT	
 
-%type  <ast> OPTIONAL_RVALUE GETFUNCTIONS INCDEC INSTRUCTIONS OPTIONAL_ELSE CONTROLL LOGICAL EXPRESSION FUNCTIONS FUNCTION VARIABLE DECLARATION PRINT DEFINITION ARITHMETIC RVALUE CONSTANT CALLPARAMS FUNCTIONCALL FUNCPARAMS 
+%type  <ast> ARRAY_DECLARATION OPTIONAL_RVALUE GETFUNCTIONS INCDEC INSTRUCTIONS OPTIONAL_ELSE CONTROLL LOGICAL EXPRESSION FUNCTIONS FUNCTION VARIABLE DECLARATION PRINT DEFINITION ARITHMETIC RVALUE CONSTANT CALLPARAMS FUNCTIONCALL FUNCPARAMS 
 %type  <data_type> TYPE
 
 
@@ -129,6 +130,7 @@ EXPRESSION: DEFINITION SEMI   { $$ = $1; }
 	  | FUNCTIONCALL SEMI { $$ = $1; } 	
 	  | INCDEC SEMI       { $$ = $1; }
           | _RETURN OPTIONAL_RVALUE SEMI { $$ = new_node(RETURN); $$->childNodes[0] = $2; }
+	  | ARRAY_DECLARATION SEMI { $$ = $1; }
 
 OPTIONAL_RVALUE: ARITHMETIC { $$ = $1; }
 		| { $$ = NULL; }
@@ -136,6 +138,8 @@ PRINT:      _PRINT LPAREN ARITHMETIC RPAREN { $$ = new_node(PRINT); $$->childNod
 
 DEFINITION: VARIABLE ASS ARITHMETIC     { $$ = new_node(DEFINITION); $$->childNodes[0] = $1; $$->childNodes[1] = $3; }
           | DECLARATION ASS ARITHMETIC  { $$ = new_node(DEFINITION); $$->childNodes[0] = $1; $$->childNodes[1] = $3; }
+	  
+
 
 ARITHMETIC: ARITHMETIC PLUOP ARITHMETIC  { $$ = new_node(ARITHMETIC); $$->childNodes[0] = $1; $$->childNodes[1] = $3; $$->op = strdup("+"); }
 	  | ARITHMETIC MINOP ARITHMETIC  { $$ = new_node(ARITHMETIC); $$->childNodes[0] = $1; $$->childNodes[1] = $3; $$->op = strdup("-"); }
@@ -162,7 +166,8 @@ RVALUE:     CONSTANT
 	  | FUNCTIONCALL         
           | INCDEC
 	  | GETFUNCTIONS
-	 
+	  
+	  
 
 	  
 GETFUNCTIONS: _GETINT  LPAREN RPAREN  { $$ = new_node(GETINT);  } 
@@ -178,12 +183,24 @@ CONSTANT:   _int                 { $$ = new_node(INT); $$->val.m_int = $1; $$->v
 	 	
 
 VARIABLE:   _id                         { $$ = new_node(ID); $$->val.m_id = $1; }
+	 | _id LBRAC ARITHMETIC RBRAC       { $$ = new_node(ARR_ID); $$->val.m_id = strdup($1); $$->childNodes[0] = $3; }
+
 
 DECLARATION: TYPE _id                   { $$ = new_node(DECLARATION); $$->val.m_id = $2; $$->val.m_flag = $1; } 
-	   
+//	    | ARRAY_DECLARATION
+
+
+	      
+ARRAY_DECLARATION: TYPE LBRAC RBRAC _id { $$ = new_node(DECLARATION); $$->val.m_id = $4; $$->val.m_flag = $1; }
+
+
+
+
+
 TYPE:       _INT                        { $$ = intType; } 
 	  | _STRING			{ $$ = stringType; }
 	  | _REAL			{ $$ = realType; }
+	  | _INT _ARRAY                 { $$ = intArrayType; }
 
 FUNCTIONCALL: _id LPAREN CALLPARAMS RPAREN { $$ = new_node(FUNCTIONCALL); $$->val.m_id = strdup($1); $$->childNodes[0] = $3; }
 
@@ -192,6 +209,8 @@ CALLPARAMS: CALLPARAMS COMMA ARITHMETIC { $$ = new_node(CALLPARAMS); $$->childNo
 	   | { $$ = NULL; } 	
 FUNCPARAMS: FUNCPARAMS COMMA DECLARATION      { $$ = new_node(FUNCPARAMS); $$->childNodes[0] = $1; $$->childNodes[1] = $3; } 
 	   | DECLARATION { $$ = $1; }
+	   | FUNCPARAMS COMMA ARRAY_DECLARATION { $$ = new_node(FUNCPARAMS); $$->childNodes[0] = $1; $$->childNodes[1] = $3; } 
+	   | ARRAY_DECLARATION                  { $$ = $1; }
 	   | { $$ = NULL; }
 
 %%
@@ -200,7 +219,7 @@ int checkFileName(const char *fileName)
 {
 
 	const char *dot = strrchr(fileName, '.');
-	if(strcmp(dot, ".frog") == 0)
+	if(strcmp(dot, ".frail") == 0)
 	{
 		return 1;
         }
@@ -220,7 +239,7 @@ int main(int argc, char **argv)
 		yyparse();
 		fclose(file);
 	} else {
-		fprintf(stderr, "This interpreter only handels frogs! Quack\n");
+		fprintf(stderr, "This interpreter only handels frail files\n");
 	}
 
 	return 0;

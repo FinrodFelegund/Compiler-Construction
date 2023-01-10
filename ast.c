@@ -91,6 +91,7 @@ void printTree(ast_node *root, Agraph_t *graph, Agnode_t *node)
 		case GETREAL: name = concatenateString("GETREAL", ""); break;
 		case GETRAND: name = concatenateString("GETRAND", ""); break;
 		case RETURN: name = concatenateString("RETURN", ""); break;
+		case ARR_ID: name = concatenateString("ARRAY ID", ""); break;
 		default: name = "Unknown Node";printf("Unknown node in printing\n"); return; 
 	}
 
@@ -125,11 +126,13 @@ value_t execute(ast_node *root)
 //	printf("Node type: %d\n", root->type);
 		switch(root->type)
 		{
-			case INSTRUCTIONS: {    if(returnSignal) break;
-						execute(root->childNodes[0]); 
-						if(returnSignal) break;
-						if(checkScope(root->childNodes[1])){ enter_block(); } execute(root->childNodes[1]); if(checkScope(root->childNodes[1])){ leave_block(); } break;
-					   }
+			case INSTRUCTIONS: 
+			{    
+				if(returnSignal) break;
+				execute(root->childNodes[0]); 
+				if(returnSignal) break;
+				if(checkScope(root->childNodes[1])){ enter_block(); } execute(root->childNodes[1]); if(checkScope(root->childNodes[1])){ leave_block(); } break;
+			}
 
 			case INCDEC: val = execute(root->childNodes[0]); char *id = strdup(val.m_id); val = incdec(root->op, val); var_set(val, id); break; 
 			
@@ -139,18 +142,28 @@ value_t execute(ast_node *root)
 			
 			case ELSE: execute(root->childNodes[0]); break;
 			
-			case FOR: execute(root->childNodes[0]); val = execute(root->childNodes[1]); if(val.m_int) { while(val.m_int) { enter_block(); execute(root->childNodes[3]); execute(root->childNodes[2]); val = execute(root->childNodes[1]); leave_block(); } } break;
-	
+			case FOR: 
+			{ 
+				execute(root->childNodes[0]); val = execute(root->childNodes[1]); 
+				if(val.m_int) { while(val.m_int) { enter_block(); execute(root->childNodes[3]); execute(root->childNodes[2]); 
+				val = execute(root->childNodes[1]); leave_block(); } } break;
+			}
+
 			case WHILE: do { enter_block(); execute(root->childNodes[1]); val = execute(root->childNodes[0]); leave_block(); } while(val.m_int); break;
 			
-			case FUNC: enter_func(); execute(root->childNodes[0]); /*var_dump();*/ setParams(); resetParams(); execute(root->childNodes[1]); /*var_dump();*/ if(!returnSignal){ leave_func(); } break;
-			
+			case FUNC: 
+			{ 
+				enter_func(); execute(root->childNodes[0]); /*var_dump();*/ setParams(); resetParams(); 
+				execute(root->childNodes[1]); var_dump(); if(!returnSignal){ leave_func(); } break;	   
+			}
+
 			case DECLARATION: val = createEmpty(); val.m_flag = root->val.m_flag; val.m_id = strdup(root->val.m_id); var_declare(val); return val;
 			
-			case DEFINITION: {     
-					 	value_t dest = execute(root->childNodes[0]); value_t source = execute(root->childNodes[1]); 
-					 	val = assignement(dest, source); var_set(val, dest.m_id); break; 
-					 }			
+			case DEFINITION:
+			{     
+				value_t dest = execute(root->childNodes[0]); value_t source = execute(root->childNodes[1]); 
+				val = assignement(dest, source); var_set(val, dest.m_id); break; 
+			}			
 
 			case RVALUE: val = execute(root->childNodes[0]); return val;
 			
@@ -158,9 +171,10 @@ value_t execute(ast_node *root)
 			
 			case INT: return root->val;
 			
-			case ARITHMETIC: {
-						value_t op1 = execute(root->childNodes[0]); value_t op2 = execute(root->childNodes[1]); val = arithmeticOperation(root->op, op1, op2); return val; 
-				   	 }  
+			case ARITHMETIC: 
+			{
+				value_t op1 = execute(root->childNodes[0]); value_t op2 = execute(root->childNodes[1]); val = arithmeticOperation(root->op, op1, op2); return val; 
+			}  
 			
 			case PRINT: val = execute(root->childNodes[0]); printExpression(val); break; 
 			
@@ -168,15 +182,21 @@ value_t execute(ast_node *root)
 			
 			case REAL: return root->val;
 			
-			case FUNCTIONCALL: { /*dumpFunctions();*/ ast_node *node = getFunction(root->val.m_id); execute(root->childNodes[0]); /*dumpParams();*/ execute(node); if(returnSignal){ leave_func(); returnSignal = 0; } val = getReturnVal(); return val; }
+			case FUNCTIONCALL: 
+			{    
+				/*dumpFunctions();*/ ast_node *node = getFunction(root->val.m_id); 
+				execute(root->childNodes[0]); /*dumpParams();*/ execute(node); if(returnSignal){ leave_func(); returnSignal = 0; } 
+				val = getReturnVal(); return val; 
+			}
 			
 			case FUNCPARAMS: execute(root->childNodes[0]); execute(root->childNodes[1]); break;
 			
-			case CALLPARAMS: { 
-					   if(root->childNodes[0]) { val = execute(root->childNodes[0]); pushParam(val); }  
-					   if(root->childNodes[1]) { val = execute(root->childNodes[1]); pushParam(val); } 
-					   break; 
-					 } 
+			case CALLPARAMS: 
+			{ 
+				if(root->childNodes[0]) { val = execute(root->childNodes[0]); pushParam(val); }  
+				if(root->childNodes[1]) { val = execute(root->childNodes[1]); pushParam(val); } 
+				break; 
+			} 
 			
 			case GETINT: val.m_flag = intType; val.m_int = getInt(); return val;
 			
@@ -184,8 +204,14 @@ value_t execute(ast_node *root)
 	
 			case GETRAND: val.m_flag = intType; val.m_int = getRand(); return val;
 	
-			case RETURN: if(root->childNodes[0]) { setReturnVal(execute(root->childNodes[0])); returnSignal = 1;  /*var_dump();*/ } break; 
+			case RETURN: if(root->childNodes[0]) { setReturnVal(execute(root->childNodes[0])); /*var_dump();*/ } returnSignal = 1; break; 
 
+			case ARR_ID: 
+			{ 
+				val = var_get(root->val.m_id); value_t tmp = execute(root->childNodes[0]); if(tmp.m_flag != intType) { fprintf(stderr, "Index has to be of type int"); exit(1); }
+				val.m_intArray.current = tmp.m_int; return val;
+				     
+			}
 			default: printf("Unknown Node in executing\n"); break;
 
 		}
@@ -216,6 +242,13 @@ void printExpression(value_t val)
 		case intType: printf("%d", val.m_int); break;
 		case realType: printf("%f", val.m_real); break;
 		case stringType: printf("%s", val.m_string); break;
+		case intArrayType:
+		{
+			for(int i = 0; i < val.m_intArray.size; i++)
+			{
+				printf("%d ", val.m_intArray.array[i]);
+			}	
+		}
 		default: break;
 	}
 
@@ -290,8 +323,34 @@ value_t arithmeticOperation(char *op, value_t op1, value_t op2)
 
 value_t assignement(value_t dest, value_t source)
 {
-
+	//printf("Datatypes: %s %s\n", getDataType(dest), getDataType(source));
 	value_t val = createEmpty();
+
+	
+//	printf("\n%d %d\n", dest.m_intArray.current, source.m_intArray.current);
+
+	if(dest.m_flag == intArrayType && source.m_flag == intType)
+	{		
+		if(dest.m_intArray.current == -1)
+		{
+
+			fprintf(stderr, "Assigning int to array is illegal\n");
+			exit(1);
+
+		}
+		pushIntArray(&dest.m_intArray, dest.m_intArray.current, source.m_int);
+		dest.m_intArray.current = -1;
+		return dest;
+	}
+	
+	if(dest.m_flag == intType && source.m_flag == intArrayType)
+	{	
+
+		val.m_int = lookUpIntArray(&source.m_intArray, source.m_intArray.current);
+		val.m_flag = intType;
+		return val;
+	}
+	
 	if(dest.m_flag != source.m_flag)
 	{
 
@@ -305,9 +364,35 @@ value_t assignement(value_t dest, value_t source)
 		case intType: val.m_int = source.m_int; val.m_flag = intType; return val;
 		case realType: val.m_real = source.m_real; val.m_flag = realType; return val;
 		case stringType: val.m_string = strdup(source.m_string); val.m_flag = stringType; return val;
-		default: return val;
-	}
+		case intArrayType:
+		{
 
+			if((dest.m_intArray.current == -1) && (source.m_intArray.current == -1))
+			{ 	
+			
+				val.m_intArray = copyIntArray(&source.m_intArray); val.m_flag = intArrayType; 
+				return val;
+				
+			} else if((dest.m_intArray.current != -1) && (source.m_intArray.current != -1))
+			{
+			
+				int tmp = lookUpIntArray(&source.m_intArray, source.m_intArray.current);
+				pushIntArray(&dest.m_intArray, dest.m_intArray.current, tmp);
+				dest.m_intArray.current = -1;
+				return dest;	
+			} 	
+			else if((dest.m_intArray.current != -1) && (source.m_intArray.current == -1)) 
+			{
+
+				fprintf(stderr, "Assigning array to member of array is illegal\n");
+				exit(1);
+			
+			}
+			break;
+		}
+		default: break;
+	}
+	
 	return val;
 
 
@@ -409,6 +494,7 @@ value_t createEmpty()
 	val.m_flag = 0;
 	val.scopeBorder = 0;
 	val.empty = 0;
+	val.m_intArray = createEmptyIntArray();
 	return val;
 
 }
@@ -421,6 +507,7 @@ char *getDataType(value_t val)
 		case intType: return "int";
 		case realType: return "real";
 		case stringType: return "string";
+		case intArrayType: return "Int Array";
 		default: break;
 	}
 	return "";
@@ -526,7 +613,7 @@ void setParams()
 
 	int j = getTopFunctionSize();
 	int k = getParamsSize();
-//	printf("Amount func stack: %d Amount param stack %d\n", j, k);	
+	printf("Amount func stack: %d Amount param stack %d\n", j, k);	
 	if( j != k)
 	{
 	

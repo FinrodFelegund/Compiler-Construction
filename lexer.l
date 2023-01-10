@@ -101,10 +101,10 @@ REAL "0"|[0-9]+"."[0-9]+
 %option noinput nounput yylineno
 %%
 
-"//".*  { printf("Comment in line: %d\n", lineno); }
+"//".*  { }
 
-"/*"    { printf("Comment from line %d ", lineno); BEGIN(Comment); }
-<Comment>"*/" { printf("to line %d\n", lineno); BEGIN(INITIAL); }
+"/*"    { BEGIN(Comment); }
+<Comment>"*/" {  BEGIN(INITIAL); }
 <Comment>"\n" { lineno++; }
 <Comment>. {;}
 
@@ -116,6 +116,7 @@ REAL "0"|[0-9]+"."[0-9]+
 <String>"\\nl" { insert("\n"); lineno++; }
 <String>[^\"\\x\\]*   { insert(yytext); }
 
+"array"   { return _ARRAY; }
 "int"     { return _INT; }
 "real"    { return _REAL; }
 "string"  { return _STRING; }
