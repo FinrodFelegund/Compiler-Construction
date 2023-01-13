@@ -36,16 +36,16 @@ ast_node *new_node(int type);
 void print(ast_node *root);
 void printTree(ast_node *root, Agraph_t *graph, Agnode_t *node);
 value_t execute(ast_node *root);
+void freeAll(ast_node *root);
 void freeTree(ast_node *root);
 int checkScope(ast_node *root);
-value_t createEmpty();
 char *getDataType(value_t val);
 
 value_t assignement(value_t dest, value_t source);
 char *concate(char *op1, char *op2);
 value_t arithmeticOperation(char *op, value_t op1, value_t op2);
 value_t incdec(char *op, value_t op1);
-int determineLogical(char *op, value_t op1, value_t op2);
+value_t determineLogical(char *op, value_t op1, value_t op2);
 void printExpression(value_t val);
 
 // --- FUNCTIONS ---
@@ -69,7 +69,7 @@ typedef struct
 void pushFunction(char *id, ast_node *node);
 ast_node *getFunction(char *id);
 void dumpFunctions();
-
+void freeFunctions();
 // --- FUNCTIONS ---
 
 // --- CALLING PARAMETER ---
@@ -105,3 +105,9 @@ void setReturnVal(value_t val);
 value_t getReturnVal();
 
 // --- RETURN ---
+
+// --- OPTIMIZATION ---
+
+void startOptimization(ast_node *node);
+void constantFolding(ast_node *node);
+void deadCodeElimination(ast_node *prev, int index, ast_node *node);

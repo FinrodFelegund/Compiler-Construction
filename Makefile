@@ -23,3 +23,4 @@ lexer.yy.o: lexer.yy.c parser.tab.h
  
 clean:
 	rm -rf symbols.o ast.o parser.tab.* lexer.yy.* exec parser.output out.png
+

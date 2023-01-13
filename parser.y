@@ -1,5 +1,6 @@
 %{
 #include <assert.h>
+//#include "ast.h"
 #include "ast.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -101,7 +102,7 @@ typedef struct
 
 %%
 
-START: FUNCTIONS {  print($1); if(mainFunction){ execute(mainFunction);} else { printf("No main function detected\n"); } /*printf("Last dump\n"); var_dump();*/ freeTree($1); }
+START: FUNCTIONS { startOptimization($1);  print($1); if(mainFunction){ execute(mainFunction);} else { printf("No main function detected\n"); } /*printf("Last dump\n"); var_dump();*/  freeAll($1); }
        | { printf("No input provided\n"); }
 
 FUNCTIONS: FUNCTIONS FUNCTION { /*printf("Creating funcs\n");*/ $$ = new_node(FUNCS); $$->childNodes[0] = $1; $$->childNodes[1] = $2; } 
@@ -116,7 +117,7 @@ INSTRUCTIONS:  INSTRUCTIONS EXPRESSION    { $$ = new_node(INSTRUCTIONS); $$->chi
 	     | { $$ = NULL; }
 	     | INSTRUCTIONS LCURLI INSTRUCTIONS RCURLI { $$ = new_node(INSTRUCTIONS); $$->childNodes[0] = $1; if($3){ $3->blockScoped = 1; } $$->childNodes[1] = $3; }
  
-CONTROLL: _IF LPAREN LOGICAL RPAREN LCURLI INSTRUCTIONS RCURLI OPTIONAL_ELSE { $$ = new_node(IF); $$->childNodes[0] = $3; $$->childNodes[1] = $6; $$->childNodes[3] = $8; }
+CONTROLL: _IF LPAREN LOGICAL RPAREN LCURLI INSTRUCTIONS RCURLI OPTIONAL_ELSE { $$ = new_node(IF); $$->childNodes[0] = $3; $$->childNodes[1] = $6; $$->childNodes[2] = $8; }
          | _WHILE LPAREN LOGICAL RPAREN LCURLI INSTRUCTIONS RCURLI            { $$ = new_node(WHILE); $$->childNodes[0] = $3; $$->childNodes[1] = $6; }
 	 | _FOR LPAREN DEFINITION SEMI LOGICAL SEMI INCDEC RPAREN LCURLI INSTRUCTIONS RCURLI { $$ = new_node(FOR); $$->childNodes[0] = $3; $$->childNodes[1] = $5; $$->childNodes[2] = $7; $$->childNodes[3] = $10; }
 
@@ -175,9 +176,9 @@ GETFUNCTIONS: _GETINT  LPAREN RPAREN  { $$ = new_node(GETINT);  }
 INCDEC:   VARIABLE INCR          { $$ = new_node(INCDEC); $$->childNodes[0] = $1; $$->op = strdup("++"); }
 	  | VARIABLE DECR	 { $$ = new_node(INCDEC); $$->childNodes[0] = $1; $$->op = strdup("--"); }
 
-CONSTANT:   _int                 { $$ = new_node(INT); $$->val.m_int = $1; $$->val.m_flag = intType; }
-          | _real                { $$ = new_node(REAL); $$->val.m_real = $1; $$->val.m_flag = realType; }
-          | _str                 { $$ = new_node(STRING); $$->val.m_string = strdup($1); $$->val.m_flag = stringType; } 
+CONSTANT:   _int                 { $$ = new_node(INT); $$->val.m_int = $1; $$->val.m_flag = intType; $$->val.boolean = $1 != 0; }
+          | _real                { $$ = new_node(REAL); $$->val.m_real = $1; $$->val.m_flag = realType; $$->val.boolean = $1 != 0; }
+          | _str                 { $$ = new_node(STRING); $$->val.m_string = strdup($1); $$->val.m_flag = stringType; $$->val.boolean = strlen($1) != 0; } 
 	 	
 
 VARIABLE:   _id                         { $$ = new_node(ID); $$->val.m_id = $1; }
@@ -190,9 +191,6 @@ DECLARATION: TYPE _id                   { $$ = new_node(DECLARATION); $$->val.m_
 
 	      
 ARRAY_DECLARATION: TYPE LBRAC RBRAC _id { $$ = new_node(DECLARATION); $$->val.m_id = $4; $$->val.m_flag = $1; }
-
-
-
 
 
 TYPE:       _INT                        { $$ = intType; } 

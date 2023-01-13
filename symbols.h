@@ -25,9 +25,11 @@ typedef struct
 	types m_flag;
 	int scopeBorder;
 	int empty;
-
+	int boolean;
 
 } value_t;
+
+value_t createEmpty();
 
 typedef struct 
 {

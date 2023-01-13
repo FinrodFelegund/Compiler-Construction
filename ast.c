@@ -6,7 +6,9 @@ function_stack f_stack;
 callParams p_stack;
 value_t returnVal;
 int returnSignal = 0;
-
+int deadCode = 0;
+int deads = 0;
+int folds = 0;
 
 ast_node *new_node(int type)
 {
@@ -20,6 +22,12 @@ ast_node *new_node(int type)
 	node->val.m_real = 0;
 	node->val.m_string = NULL;
 	node->val.scopeBorder = 0;
+	for(int i = 0; i < MAXCHILDREN; i++)
+	{
+
+		node->childNodes[i] = NULL;
+
+	}
         return node;
  
 }
@@ -57,8 +65,8 @@ void printTree(ast_node *root, Agraph_t *graph, Agnode_t *node)
 	if(root == NULL)
 		return;
 	
-	//printf("Node: %d ", l++); 
-	//printf("%d\n", root->type);
+//	printf("Node: %d ", l++); 
+//	printf("%d\n", root->type);
 	char *name = NULL;
 	switch(root->type)
 	{
@@ -136,9 +144,9 @@ value_t execute(ast_node *root)
 
 			case INCDEC: val = execute(root->childNodes[0]); char *id = strdup(val.m_id); val = incdec(root->op, val); var_set(val, id); break; 
 			
-			case LOGICAL: val.m_flag = root->childNodes[0]->val.m_flag; val.m_int = determineLogical(root->op, execute(root->childNodes[0]), execute(root->childNodes[1])); return val;
+			case LOGICAL: val = determineLogical(root->op, execute(root->childNodes[0]), execute(root->childNodes[1])); return val;
 			
-			case IF: val = execute(root->childNodes[0]); if(val.m_int){ execute(root->childNodes[1]); } else if(root->childNodes[3]) { execute(root->childNodes[3]); } break;
+			case IF: val = execute(root->childNodes[0]); /*printVariable(val);*/  if(val.boolean){ execute(root->childNodes[1]); } else if(root->childNodes[2]) { execute(root->childNodes[2]); } break;
 			
 			case ELSE: execute(root->childNodes[0]); break;
 			
@@ -154,7 +162,7 @@ value_t execute(ast_node *root)
 			case FUNC: 
 			{ 
 				enter_func(); execute(root->childNodes[0]); /*var_dump();*/ setParams(); resetParams(); 
-				execute(root->childNodes[1]); /*var_dump();*/ if(!returnSignal){ leave_func(); } break;	   
+				execute(root->childNodes[1]); var_dump(); if(!returnSignal){ leave_func(); } break;	   
 			}
 
 			case DECLARATION: val = createEmpty(); val.m_flag = root->val.m_flag; val.m_id = strdup(root->val.m_id); var_declare(val); return val;
@@ -169,7 +177,7 @@ value_t execute(ast_node *root)
 			
 			case ID:  val = var_get(root->val.m_id); return val;
 			
-			case INT: return root->val;
+			case INT: root->val.boolean = root->val.m_int != 0; return root->val; 
 			
 			case ARITHMETIC: 
 			{
@@ -178,9 +186,9 @@ value_t execute(ast_node *root)
 			
 			case PRINT: val = execute(root->childNodes[0]); printExpression(val); break; 
 			
-			case STRING: return root->val;
+			case STRING: root->val.boolean = strlen(root->val.m_string) != 0; return root->val;
 			
-			case REAL: return root->val;
+			case REAL: root->val.boolean = root->val.m_real != 0; return root->val;
 			
 			case FUNCTIONCALL: 
 			{    
@@ -272,17 +280,54 @@ value_t arithmeticOperation(char *op, value_t op1, value_t op2)
 	value_t val = createEmpty();
 
 	if((op1.m_flag == intArrayType) && (op2.m_flag == intType))
-	{
-
+	{	
 		if(op1.m_intArray.current == -1)
 		{
+		
 			fprintf(stderr, "array name not availbale for arithmetic operations\n");
 			exit(1);
+
 		}
-		val.m_flag = intType;	
-		val.m_int = lookUpIntArray(&op1.m_intArray, op1.m_intArray.current) + op2.m_int;
-		return val;
+		val.m_flag = intType;
+		if(strcmp(op, "+") == 0)
+		{
+
+			val.m_int = lookUpIntArray(&op1.m_intArray, op1.m_intArray.current) + op2.m_int;
+			return val;
+
+		}
+		if(strcmp(op, "-") == 0)
+		{
+
+			val.m_int = lookUpIntArray(&op1.m_intArray, op1.m_intArray.current) - op2.m_int;
+			return val;
+		
+		}
+
+		if(strcmp(op, "*") == 0)
+		{
+
+			val.m_int = lookUpIntArray(&op1.m_intArray, op1.m_intArray.current) * op2.m_int;
+			return val;
+
+		}
 	
+		if(strcmp(op, "/") == 0)
+		{
+
+			val.m_int = lookUpIntArray(&op1.m_intArray, op1.m_intArray.current) / op2.m_int;
+			return val;
+	
+		}
+	
+		if(strcmp(op, "%") == 0)
+		{
+
+			val.m_int = lookUpIntArray(&op1.m_intArray, op1.m_intArray.current) % op2.m_int;
+			return val;
+
+		}
+
 	}
 
 	if((op1.m_flag == intType) && (op2.m_flag == intArrayType))
@@ -297,97 +342,149 @@ value_t arithmeticOperation(char *op, value_t op1, value_t op2)
 		
 		}
 		val.m_flag = intType;
-		val.m_int = op1.m_int + lookUpIntArray(&op2.m_intArray, op2.m_intArray.current);
-		return val;
-
 	
+		if(strcmp(op, "+") == 0)
+		{
+
+			val.m_int = op1.m_int + lookUpIntArray(&op2.m_intArray, op2.m_intArray.current);
+			return val;
+
+		}
+
+		if(strcmp(op, "-") == 0)
+		{
+
+			val.m_int = op1.m_int - lookUpIntArray(&op2.m_intArray, op2.m_intArray.current);
+			return val;
+
+		}
+
+		if(strcmp(op, "*") == 0)
+		{
+
+			val.m_int = op1.m_int * lookUpIntArray(&op2.m_intArray, op2.m_intArray.current);
+			return val;
+		
+		}
+
+		if(strcmp(op, "/") == 0)
+		{
+
+			val.m_int = op1.m_int / lookUpIntArray(&op2.m_intArray, op2.m_intArray.current);
+			return val;
+
+		}
+	
+		if(strcmp(op, "%") == 0)
+		{
+
+			val.m_int = op1.m_int % lookUpIntArray(&op2.m_intArray, op2.m_intArray.current);
+			return val;
+
+		}
 	}
 
-
-
-
-	if(op1.m_flag != op2.m_flag)
+	if(((op1.m_flag == stringType) && (op2.m_flag != stringType)) || ((op1.m_flag != stringType) && (op2.m_flag == stringType)))
 	{
 
-		fprintf(stderr, "Arithmetic operations with different datatypes is illegal\n");
+		fprintf(stderr, "For operations on strings, bot operands have to be of type string\n");
 		exit(1);
 
 	}
 
-	if(op1.m_flag == stringType)
-        {
-		val.m_flag = stringType;
-                if(strcmp(op, "+") == 0)
-		{ 
-			val.m_string = concate(op1.m_string, op2.m_string);
-			return val;
-          	} else 
-		{
-			fprintf(stderr, "Operations other than + are not allowed on strings\n");
-			exit(1);
-		}        
-	}
-	
-	if(op1.m_flag == intType)
+	if((op1.m_flag == intType) && (op2.m_flag == realType))
 	{
-		
+
 		val.m_flag = intType;
-		if(strcmp(op, "+") == 0) val.m_int = op1.m_int + op2.m_int;
-		if(strcmp(op, "-") == 0) val.m_int = op1.m_int - op2.m_int; 
-		if(strcmp(op, "*") == 0) val.m_int = op1.m_int * op2.m_int;
-		if(strcmp(op, "/") == 0) val.m_int = op1.m_int / op2.m_int; 
-		if(strcmp(op, "%") == 0) val.m_int = op1.m_int % op2.m_int;
-		
+		val.m_int = op1.m_int + op2.m_real;
+		return val;
+
 	}
 
-
-	if(op1.m_flag == realType)
+	if((op1.m_flag == realType) && (op2.m_flag == intType))
 	{
+
 		val.m_flag = realType;
-		if(strcmp(op, "+") == 0) val.m_real = op1.m_real + op2.m_real;
-		if(strcmp(op, "-") == 0) val.m_real = op1.m_real - op2.m_real; 
-		if(strcmp(op, "*") == 0) val.m_real = op1.m_real * op2.m_real;
-		if(strcmp(op, "/") == 0) val.m_real = op1.m_real / op2.m_real;
-		if(strcmp(op, "%") == 0) fprintf(stderr, "Modulo operand on real types is illegal\n"); exit(1);
+		val.m_real = op1.m_real + op2.m_int;
+		return val;
+
 	}
 
-	if(op1.m_flag == intArrayType)
+
+	if(op1.m_flag == op2.m_flag)
 	{
 
-		if((op1.m_intArray.current == -1) && (op2.m_intArray.current == -1))
+		if(op1.m_flag == stringType)
+        	{
+			val.m_flag = stringType;
+                	if(strcmp(op, "+") == 0)
+			{ 
+				val.m_string = concate(op1.m_string, op2.m_string);
+				return val;
+          		} else 
+			{
+				fprintf(stderr, "Operations other than + are not allowed on strings\n");
+				exit(1);
+			}        
+		}
+	
+		if(op1.m_flag == intType)
 		{
-
-			val.m_flag = intArrayType;
-			int size = op1.m_intArray.size + op2.m_intArray.size;
-			val.m_intArray.array = malloc(size * sizeof(int));
-			val.m_intArray.size = size;
-			memcpy(val.m_intArray.array, op1.m_intArray.array, op1.m_intArray.size * sizeof(int));
-			memcpy(val.m_intArray.array + op1.m_intArray.size, op2.m_intArray.array, op2.m_intArray.size * sizeof(int));	
-			return val;
-		}
-
-		if((op1.m_intArray.current != -1) && (op2.m_intArray.current != -1))
-		{	
+		
 			val.m_flag = intType;
-			val.m_int = lookUpIntArray(&op1.m_intArray, op1.m_intArray.current) + lookUpIntArray(&op2.m_intArray, op2.m_intArray.current);
-			return val;
-
+			if(strcmp(op, "+") == 0) val.m_int = op1.m_int + op2.m_int;
+			if(strcmp(op, "-") == 0) val.m_int = op1.m_int - op2.m_int; 
+			if(strcmp(op, "*") == 0) val.m_int = op1.m_int * op2.m_int;
+			if(strcmp(op, "/") == 0) val.m_int = op1.m_int / op2.m_int; 
+			if(strcmp(op, "%") == 0) val.m_int = op1.m_int % op2.m_int;
+		
 		}
 
+
+		if(op1.m_flag == realType)
+		{
+			val.m_flag = realType;
+			if(strcmp(op, "+") == 0) val.m_real = op1.m_real + op2.m_real;
+			if(strcmp(op, "-") == 0) val.m_real = op1.m_real - op2.m_real; 
+			if(strcmp(op, "*") == 0) val.m_real = op1.m_real * op2.m_real;
+			if(strcmp(op, "/") == 0) val.m_real = op1.m_real / op2.m_real;
+			if(strcmp(op, "%") == 0) fprintf(stderr, "Modulo operand on real types is illegal\n"); exit(1);
+		}
+
+		if(op1.m_flag == intArrayType)
+		{	
+
+			if((op1.m_intArray.current == -1) && (op2.m_intArray.current == -1))
+			{
+
+				val.m_flag = intArrayType;
+				int size = op1.m_intArray.size + op2.m_intArray.size;
+				val.m_intArray.array = malloc(size * sizeof(int));
+				val.m_intArray.size = size;
+				memcpy(val.m_intArray.array, op1.m_intArray.array, op1.m_intArray.size * sizeof(int));
+				memcpy(val.m_intArray.array + op1.m_intArray.size, op2.m_intArray.array, op2.m_intArray.size * sizeof(int));	
+				return val;
+			}
+
+			if((op1.m_intArray.current != -1) && (op2.m_intArray.current != -1))
+			{	
+				val.m_flag = intType;
+				val.m_int = lookUpIntArray(&op1.m_intArray, op1.m_intArray.current) + lookUpIntArray(&op2.m_intArray, op2.m_intArray.current);
+				return val;
+
+			}
+
 	
-	}
-	
+		}
+	}	
 
 	return val;
 }
 
 value_t assignement(value_t dest, value_t source)
 {
-	//printf("Datatypes: %s %s\n", getDataType(dest), getDataType(source));
-	value_t val = createEmpty();
 
-	
-//	printf("\n%d %d\n", dest.m_intArray.current, source.m_intArray.current);
+	value_t val = createEmpty();
 
 	if(dest.m_flag == intArrayType && source.m_flag == intType)
 	{		
@@ -405,55 +502,83 @@ value_t assignement(value_t dest, value_t source)
 	
 	if(dest.m_flag == intType && source.m_flag == intArrayType)
 	{	
+		
+		if(source.m_intArray.current == -1)
+		{
 
+			fprintf(stderr, "Assigning array to int is illegal\n");
+			exit(1);
+
+		}
 		val.m_int = lookUpIntArray(&source.m_intArray, source.m_intArray.current);
 		val.m_flag = intType;
 		return val;
 	}
-	
-	if(dest.m_flag != source.m_flag)
+
+	if(((source.m_flag == stringType) && (dest.m_flag != stringType)) || ((source.m_flag != stringType) && (dest.m_flag == stringType)))
 	{
 
-		fprintf(stderr, "Assignement between different data types is illegal\n");
-		exit(1);	
+		fprintf(stderr, "Assignements with strings are restricted to strings\n");
+		exit(1);
 
 	}
-	switch(dest.m_flag)
+	
+	if(source.m_flag == intType && dest.m_flag == realType)
 	{
+			
+		val.m_flag = realType;
+		val.m_real = source.m_int;
+		return val;
 
-		case intType: val.m_int = source.m_int; val.m_flag = intType; return val;
-		case realType: val.m_real = source.m_real; val.m_flag = realType; return val;
-		case stringType: val.m_string = strdup(source.m_string); val.m_flag = stringType; return val;
-		case intArrayType:
+	}
+
+	if(source.m_flag == realType && dest.m_flag == intType)
+	{
+		printf("here\n");
+		val.m_flag = intType;
+		val.m_int = source.m_real;
+		return val;
+
+	}
+
+	if(dest.m_flag == source.m_flag)
+	{
+	
+		switch(dest.m_flag)
 		{
 
-			if((dest.m_intArray.current == -1) && (source.m_intArray.current == -1))
-			{ 	
-//				printf("Assigning array to array\n");
-		//		printArray(&dest.m_intArray);
-		//		printArray(&source.m_intArray);	
-				val.m_intArray = copyIntArray(&source.m_intArray); val.m_flag = intArrayType; 
-		//		printArray(&val.m_intArray);
-				return val;
-				
-			} else if((dest.m_intArray.current != -1) && (source.m_intArray.current != -1))
-			{
-			
-				int tmp = lookUpIntArray(&source.m_intArray, source.m_intArray.current);
-				pushIntArray(&dest.m_intArray, dest.m_intArray.current, tmp);
-				dest.m_intArray.current = -1;
-				return dest;	
-			} 	
-			else if((dest.m_intArray.current != -1) && (source.m_intArray.current == -1)) 
+			case intType: val.m_int = source.m_int; val.m_flag = intType; return val;
+			case realType: val.m_real = source.m_real; val.m_flag = realType; return val;
+			case stringType: val.m_string = strdup(source.m_string); val.m_flag = stringType; return val;
+			case intArrayType:
 			{
 
-				fprintf(stderr, "Assigning array to member of array is illegal\n");
-				exit(1);
+				if((dest.m_intArray.current == -1) && (source.m_intArray.current == -1))
+				{ 	
+
+					val.m_intArray = copyIntArray(&source.m_intArray); val.m_flag = intArrayType; 
+					return val;
+				
+				} else if((dest.m_intArray.current != -1) && (source.m_intArray.current != -1))
+				{
 			
+					int tmp = lookUpIntArray(&source.m_intArray, source.m_intArray.current);
+					pushIntArray(&dest.m_intArray, dest.m_intArray.current, tmp);
+					dest.m_intArray.current = -1;
+					return dest;	
+				} 	
+				else if((dest.m_intArray.current != -1) && (source.m_intArray.current == -1)) 
+				{
+
+					fprintf(stderr, "Assigning array to member of array is illegal\n");
+					exit(1);
+			
+				}
+				break;
 			}
-			break;
+			default: break;
 		}
-		default: break;
+
 	}
 	
 	return val;
@@ -488,10 +613,13 @@ value_t incdec(char *op, value_t op1)
 	return op1;
 }
 
-int determineLogical(char *op, value_t op1, value_t op2)
+value_t determineLogical(char *op, value_t op1, value_t op2)
 {
 	
 //	printf("Types: %s %d  %s %d\n", op1.m_id, op1.m_flag, op2.m_id, op2.m_flag);	
+	
+	value_t val = createEmpty();
+
 	if(op1.m_flag != op2.m_flag)
 	{
 
@@ -499,68 +627,217 @@ int determineLogical(char *op, value_t op1, value_t op2)
 		exit(1);
 
 	}
+
+	if(op1.boolean == 0 || op2.boolean == 0)
+	{
+
+		val.boolean = 0;
+		val.m_flag = op1.m_flag;
+
+	}
 	
 	if(op1.m_flag == stringType)
-	{
-		if(strcmp(op, "<") == 0) return strlen(op1.m_string) < strlen(op2.m_string);
-		if(strcmp(op, ">") == 0) return strlen(op1.m_string) > strlen(op2.m_string);
-		if(strcmp(op, "<=") == 0) return strlen(op1.m_string) <= strlen(op2.m_string);
-		if(strcmp(op, ">=") == 0) return strlen(op1.m_string) >= strlen(op2.m_string);
-		if(strcmp(op, "!=") == 0) return strlen(op1.m_string) != strlen(op2.m_string);
-		if(strcmp(op, "==") == 0) return strlen(op1.m_string) == strlen(op2.m_string);
-		if(strcmp(op, "&&") == 0) return strlen(op1.m_string) && strlen(op2.m_string);
-		if(strcmp(op, "||") == 0) return strlen(op1.m_string) || strlen(op2.m_string);	
-		if(strcmp(op, "!") == 0) return !strlen(op1.m_string); 
+	{	
+		val.m_flag = stringType;
+		if(strcmp(op, "<") == 0)
+		{ 
+			val.m_int =  strlen(op1.m_string) < strlen(op2.m_string) ? strlen(op2.m_string) : strlen(op1.m_string);
+			val.boolean = strlen(op1.m_string) < strlen(op2.m_string);
+		}
+		if(strcmp(op, ">") == 0)
+		{
+
+			val.m_int =  strlen(op1.m_string) > strlen(op2.m_string) ? strlen(op1.m_string) : strlen(op2.m_string);
+			val.boolean = strlen(op1.m_string) > strlen(op2.m_string);
+			
+		}
+		if(strcmp(op, "<=") == 0) 
+		{
+
+			val.m_int =  strlen(op1.m_string) <= strlen(op2.m_string) ? strlen(op2.m_string) : strlen(op1.m_string);
+			val.boolean = strlen(op1.m_string) <= strlen(op2.m_string);
+		}
+		if(strcmp(op, ">=") == 0)
+		{
+
+			val.m_int =  strlen(op1.m_string) >= strlen(op2.m_string) ? strlen(op1.m_string) : strlen(op2.m_string);
+			val.boolean = strlen(op1.m_string) >= strlen(op2.m_string);
+		}
+		if(strcmp(op, "!=") == 0) 
+		{
+
+			val.m_int =  strlen(op1.m_string) != strlen(op2.m_string) ? strlen(op1.m_string) : strlen(op2.m_string);
+			val.m_int = strlen(op1.m_string) != strlen(op2.m_string);
+		}
+		if(strcmp(op, "==") == 0)
+		{
+				
+			val.m_int = strlen(op1.m_string) == strlen(op2.m_string) ? strlen(op1.m_string) : strlen(op2.m_string);
+			val.boolean = strlen(op1.m_string) == strlen(op2.m_string);
+		}
+
+		if(strcmp(op, "&&") == 0) 
+		{
+
+			val.m_int = strlen(op1.m_string) && strlen(op2.m_string) ? strlen(op1.m_string) : strlen(op2.m_string);
+			val.boolean = strlen(op1.m_string) && strlen(op2.m_string);
+		}
+
+		if(strcmp(op, "||") == 0)
+		{
+
+			val.m_int =  strlen(op1.m_string) || strlen(op2.m_string) ? strlen(op1.m_string) : strlen(op2.m_string);
+			val.boolean = strlen(op1.m_string) || strlen(op2.m_string);
+		}
+		if(strcmp(op, "!") == 0)
+		{
+
+			printf("TODO\n");
+
+		}
 	}
 
 	if(op1.m_flag == intType)
-	{
-		//printf("Operants: %d %d\n", op1.m_int, op2.m_int);
-		if(strcmp(op, "<") == 0) return op1.m_int < op2.m_int;
-                if(strcmp(op, ">") == 0) return op1.m_int > op2.m_int; 
-                if(strcmp(op, "<=") == 0) return op1.m_int <= op2.m_int;
-                if(strcmp(op, ">=") == 0) return op1.m_int >= op2.m_int;
-                if(strcmp(op, "!=") == 0) return op1.m_int != op2.m_int;
-                if(strcmp(op, "==") == 0) return op1.m_int == op2.m_int;
-		if(strcmp(op, "&&") == 0) return op1.m_int && op2.m_int;
-		if(strcmp(op, "||") == 0) return op1.m_int || op2.m_int;
-		if(strcmp(op, "!") == 0) return !op1.m_int; 
+	{	
+		val.m_flag = intType;
+//		printf("Operants: %d %d\n", op1.m_int, op2.m_int);
+		if(strcmp(op, "<") == 0) 
+		{
+
+			val.m_int = op1.m_int < op2.m_int ? op2.m_int : op1.m_int;
+			val.boolean = op1.m_int < op2.m_int;
+
+		}
+                if(strcmp(op, ">") == 0)
+		{
+
+			val.m_int = op1.m_int > op2.m_int ? op1.m_int : op2.m_int;
+			val.boolean = op1.m_int > op2.m_int;
+
+		} 
+                if(strcmp(op, "<=") == 0)
+		{
+
+			val.m_int = op1.m_int <= op2.m_int ? op2.m_int : op1.m_int;
+			val.boolean = op1.m_int <= op2.m_int;
+
+		}
+                if(strcmp(op, ">=") == 0)
+		{
+
+			val.m_int = op1.m_int >= op2.m_int ? op1.m_int : op2.m_int;
+			val.boolean = op1.m_int >= op2.m_int;
+
+		} 
+                if(strcmp(op, "!=") == 0)
+		{
+
+			val.m_int = op1.m_int != op2.m_int ? op1.m_int : op2.m_int;
+			val.boolean = op1.m_int != op2.m_int;
+
+		} 
+                if(strcmp(op, "==") == 0)
+		{
+
+			val.m_int = op1.m_int == op2.m_int ? op1.m_int : op2.m_int;
+			val.boolean = op1.m_int == op2.m_int;
+
+		}
+		if(strcmp(op, "&&") == 0)
+		{
+
+			val.m_int = op1.m_int && op2.m_int ? op1.m_int : op2.m_int;
+			val.boolean = op1.m_int && op2.m_int;
+		}
+		if(strcmp(op, "||") == 0)
+		{
+
+			val.m_int = op1.m_int || op2.m_int ? op1.m_int : op2.m_int;
+			val.boolean = op1.m_int || op2.m_int;
+
+		}
+		if(strcmp(op, "!") == 0)
+		{
+
+			printf("TODO\n");
+
+		}
 	}
 
 	if(op1.m_flag == realType)
 	{
 
-		if(strcmp(op, "<") == 0) return op1.m_real < op2.m_real;
-                if(strcmp(op, ">") == 0) return op1.m_real > op2.m_real;
-                if(strcmp(op, "<=") == 0) return op1.m_real <= op2.m_real;
-                if(strcmp(op, ">=") == 0) return op1.m_real >= op2.m_real;
-                if(strcmp(op, "!=") == 0) return op1.m_real != op2.m_real;
-                if(strcmp(op, "==") == 0) return op1.m_real == op2.m_real;
-		if(strcmp(op, "&&") == 0) return op1.m_real && op2.m_real;
-		if(strcmp(op, "||") == 0) return op1.m_real || op2.m_real;
-		if(strcmp(op, "!") == 0) return !op1.m_real; 
+
+          
+                 val.m_flag = realType;
+                  //printf("Operants: %d %d\n", op1.m_int, op2.m_int);
+                 if(strcmp(op, "<") == 0)                 {
+ 
+                         val.m_real = op1.m_real < op2.m_real ? op2.m_real : op1.m_real;
+                         val.boolean = op1.m_real < op2.m_real;
+ 
+                 }
+                 if(strcmp(op, ">") == 0)
+                 {
+ 
+                         val.m_real = op1.m_real > op2.m_real ? op1.m_real : op2.m_real;
+                         val.boolean = op1.m_real > op2.m_real;
+ 
+                 }
+                 if(strcmp(op, "<=") == 0)
+                 {
+ 
+                         val.m_real = op1.m_real <= op2.m_real ? op2.m_real : op1.m_real;
+                        val.boolean = op1.m_real <= op2.m_real;
+  
+                  }
+                  if(strcmp(op, ">=") == 0)
+                  {
+  
+                          val.m_real = op1.m_real >= op2.m_real ? op1.m_real : op2.m_real;
+                          val.boolean = op1.m_real >= op2.m_real;
+  
+                  }
+                  if(strcmp(op, "!=") == 0)
+                  {
+  
+                          val.m_real = op1.m_real != op2.m_real ? op1.m_real : op2.m_real;
+                          val.boolean = op1.m_real != op2.m_real;
+  
+                  }
+                  if(strcmp(op, "==") == 0)
+                  {
+  
+                          val.m_real = op1.m_real == op2.m_real ? op1.m_real : op2.m_real;
+                          val.boolean = op1.m_real == op2.m_real;
+  
+                  }
+                  if(strcmp(op, "&&") == 0)
+                  {
+  
+                          val.m_real = op1.m_real && op2.m_real ? op1.m_real : op2.m_real;
+                          val.boolean = op1.m_real && op2.m_real;
+                  }
+                  if(strcmp(op, "||") == 0)
+                  {
+  
+                          val.m_real = op1.m_real || op2.m_real ? op1.m_real : op2.m_real;
+                          val.boolean = op1.m_real || op2.m_real;
+  
+                  }
+		if(strcmp(op, "!") == 0)
+		{
+
+			printf("TODO\n");
+		
+		}
 	}	
 	  
 
-	return 0;
-
-}
-
-value_t createEmpty()
-{
-
-	value_t val;
-	val.m_id = NULL;
-	val.m_int = 0;
-	val.m_real = 0;
-	val.m_string = NULL;
-	val.m_flag = 0;
-	val.scopeBorder = 0;
-	val.empty = 0;
-	val.m_intArray = createEmptyIntArray();
 	return val;
 
 }
+
 
 char *getDataType(value_t val)
 {
@@ -620,6 +897,24 @@ void dumpFunctions()
 	}
 	printf("--- Functions Bottom ---\n\n");
 
+
+}
+
+void freeFunctions()
+{
+
+	if(f_stack.nodes)
+	{
+		for(int i = 0; i < f_stack.size; i++)
+		{
+
+			if(f_stack.nodes[i].id)
+			{
+				free(f_stack.nodes[i].id);
+			}
+		}
+		free(f_stack.nodes);
+	}
 
 }
 
@@ -745,14 +1040,24 @@ void setRand()
 
 }
 
+void freeAll(ast_node *root)
+{
+
+	freeTree(root);
+//	printf("Tree deleted\n");
+	freeStack();
+	freeFunctions();
+
+
+}
 
 void freeTree(ast_node *root)
 {	
-	
+
 	for(int i = 0; i < MAXCHILDREN; i++)
 	{
 	
-		if(root->childNodes[i])
+		if(root->childNodes[i] != NULL)
 		{
 
 			freeTree(root->childNodes[i]);
@@ -760,7 +1065,7 @@ void freeTree(ast_node *root)
 		}
 
 	}
-
+	
 	if(root->funcName)
 		free(root->funcName);
 	if(root->op)
@@ -771,9 +1076,8 @@ void freeTree(ast_node *root)
 	
 	if(root->val.m_id)
 		free(root->val.m_id);
-
+//	printf("Deads: %d\n", deads);
 	free(root);
-	freeStack();	
 
 }
 
@@ -791,4 +1095,234 @@ value_t getReturnVal()
 
 	return returnVal;
 
+}
+
+
+
+int deleted = 0;
+
+void startOptimization(ast_node *node)
+{
+
+	printf("Starting optimization\n");
+	constantFolding(node);
+	deadCodeElimination(NULL, 0, node);
+	printf("Eliminated %d blocks of dead code and %d operations were folded\n", deads, folds);
+
+}
+	
+void deadCodeElimination(ast_node *prev, int index, ast_node *node)
+{
+
+
+	if(node == NULL)
+	{
+
+		return;
+	
+	}
+
+	switch(node->type)
+	{
+
+		case FUNCS:
+		{
+
+			deadCodeElimination(node, 0, node->childNodes[0]); 
+			deadCode = 0;
+			deadCodeElimination(node, 1, node->childNodes[1]);
+			deadCode = 0;
+			break;		
+		}
+
+		case FUNC:
+		{
+
+			deadCodeElimination(node, 0, node->childNodes[1]);
+			deadCode = 0;
+			break;
+		}
+	
+		case INSTRUCTIONS:
+		{
+
+			deadCodeElimination(node, 0, node->childNodes[0]);
+			if(deleted)
+			{
+
+				deleted = 0;
+				node->childNodes[0] = NULL;
+
+			}
+			deadCodeElimination(node, 1, node->childNodes[1]);
+			if(deleted)
+			{
+
+				deleted = 0;
+				node->childNodes[1] = NULL;
+
+			}
+			break;
+		}
+
+		case RETURN:
+		{
+
+			deadCode = 1;
+			break;
+		}
+		
+		case IF:
+		{
+			
+			if(node->childNodes[0]->type != LOGICAL && node->childNodes[0] != ID)
+			{
+
+			
+				//check if the expression evaluates to true
+				if(node->childNodes[0]->val.boolean)
+				{
+
+
+					//remove the if statement with instructions
+					freeTree(node->childNodes[0]);
+					node->childNodes[0] = NULL;
+					prev->childNodes[index] = node->childNodes[1];	
+					
+					if(node->childNodes[2])
+					{
+						// remove else branch if existing
+						freeTree(node->childNodes[2]);
+						node->childNodes[2] = NULL;
+
+					}
+					free(node);
+					node = NULL;
+					deads++;		
+
+				} else 
+				{
+
+					//make the else branch the instruction
+					freeTree(node->childNodes[0]);
+					node->childNodes[0] = NULL;
+					freeTree(node->childNodes[1]);
+					node->childNodes[1] = NULL;
+					prev->childNodes[index] = node->childNodes[2]->childNodes[0];
+					free(node->childNodes[2]);
+					free(node);
+					node = NULL;
+					deads++;
+				
+				}
+
+			}	
+
+			//just check if node was deleted
+			if(node != NULL)
+			{
+
+				deadCodeElimination(node, 1, node->childNodes[1]);
+			
+			} else 
+			{
+
+				deadCodeElimination(prev, index, prev->childNodes[index]);
+
+			}
+
+			if(deadCode)
+			{
+
+				deadCode = 0;
+
+			}
+			break;
+		}
+
+
+
+		default:
+		{	
+			if(deadCode)
+			{	
+//				printf("Deleting %d\n", node->type);
+				freeTree(node);
+				deleted = 1;
+				deads++;
+				node = NULL;
+			}
+			break;
+
+		}
+	}
+
+
+
+}
+
+
+void constantFolding(ast_node *node)
+{
+
+	for(int i = 0; i < MAXCHILDREN; i++)
+	{
+		if(node->childNodes[i])
+		{
+			constantFolding(node->childNodes[i]);
+		}
+	}
+
+	if(node->type == LOGICAL && node->childNodes[0] && node->childNodes[1])
+	{
+
+		if(!node->childNodes[0]->val.m_id && !node->childNodes[1]->val.m_id)
+		{
+
+			node->val = determineLogical(node->op, node->childNodes[0]->val, node->childNodes[1]->val);
+			node->type = INT;
+			freeTree(node->childNodes[0]);
+			freeTree(node->childNodes[1]);
+			node->childNodes[0] = NULL;
+			node->childNodes[1] = NULL;
+			folds++;
+		} else 
+		{
+
+			node->val.m_id = strdup("Not foldable");
+
+		}
+
+	}
+
+
+
+	if(node->type == ARITHMETIC && node->childNodes[0] && node->childNodes[1])
+	{
+
+		if(!node->childNodes[0]->val.m_id && !node->childNodes[1]->val.m_id)
+		{
+
+			node->val = arithmeticOperation(node->op, node->childNodes[0]->val, node->childNodes[1]->val);
+			switch(node->val.m_flag)
+			{
+
+				case intType: node->type = INT; break;
+				case realType: node->type = REAL; break;
+				default: break;
+
+			}
+			freeTree(node->childNodes[0]);
+			freeTree(node->childNodes[1]);
+			node->childNodes[0] = NULL;
+			node->childNodes[1] = NULL;
+			folds++;
+		} else 
+		{
+
+			node->val.m_id = strdup("Not foldable");
+
+		}
+
+	}
 }

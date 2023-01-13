@@ -3,6 +3,25 @@
 var_stack stack_l;
 var_stack stack_g;
 
+
+value_t createEmpty()
+{
+ 
+        value_t val;
+        val.m_id = NULL;
+        val.m_int = 0;
+        val.m_real = 0;
+        val.m_string = NULL;
+        val.m_flag = 0;
+        val.scopeBorder = 0;
+        val.empty = 0;
+        val.m_intArray = createEmptyIntArray();
+	val.boolean = 1; 
+        return val;
+ 
+}
+
+
 void printVariable(value_t val)
 {
 	
@@ -25,7 +44,7 @@ void printVariable(value_t val)
 	switch(val.m_flag)
 	{
 
-		case intType: printf("%d\n", val.m_int); break;
+		case intType: printf("%d Boolean: %d\n", val.m_int, val.boolean); break;
 		case realType: printf("%f\n", val.m_real); break;
 		case stringType: printf("%s\n", val.m_string); break;
 		case intArrayType: printf("Int Array\n"); break;
@@ -44,8 +63,7 @@ void stack_push(value_t val)
 void enter_func()
 {	
 //	printf("Entering function\n");
-	value_t val;
-	val.m_id = "";
+	value_t val = createEmpty();
 	val.scopeBorder = func_border;
 	stack_push(val);
 
@@ -69,8 +87,7 @@ void leave_func()
 void enter_block()
 {
 
-	value_t val;
-	val.m_id = "";
+	value_t val = createEmpty();
 	val.scopeBorder = block_border;
 	stack_push(val);
 
@@ -241,15 +258,17 @@ void freeStack()
 		int i = stack_l.size - 1;
 		for(; i >= 0; i--)
 		{
-
-	/*		if(stack_l.vals[i].m_id)
+//			printf("Free\n");
+			if(stack_l.vals[i].m_id)
 				free(stack_l.vals[i].m_id);
 			if(stack_l.vals[i].m_string)
-				free(stack_l.vals[i].m_string);	*/
+				free(stack_l.vals[i].m_string);	
 		}
+	}
 	stack_l.size = stack_l.used = 0;
-	//if(stack_l.vals)
-	//	free(stack_l.vals);
+	if(stack_l.vals)
+	{
+		free(stack_l.vals);
 	}
 }
 
