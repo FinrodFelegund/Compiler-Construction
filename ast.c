@@ -9,6 +9,8 @@ int returnSignal = 0;
 int deadCode = 0;
 int deads = 0;
 int folds = 0;
+int arranges = 0;
+
 
 ast_node *new_node(int type)
 {
@@ -16,12 +18,7 @@ ast_node *new_node(int type)
         node->type = type;
 	node->funcName = NULL;
 	node->blockScoped = 0;
-	node->op = NULL;
-	node->val.m_id = NULL;
-	node->val.m_int = 0;
-	node->val.m_real = 0;
-	node->val.m_string = NULL;
-	node->val.scopeBorder = 0;
+	node->val = createEmpty();
 	for(int i = 0; i < MAXCHILDREN; i++)
 	{
 
@@ -387,7 +384,7 @@ value_t arithmeticOperation(char *op, value_t op1, value_t op2)
 	if(((op1.m_flag == stringType) && (op2.m_flag != stringType)) || ((op1.m_flag != stringType) && (op2.m_flag == stringType)))
 	{
 
-		fprintf(stderr, "For operations on strings, bot operands have to be of type string\n");
+		fprintf(stderr, "For operations on strings, both operands have to be of type string\n");
 		exit(1);
 
 	}
@@ -992,7 +989,6 @@ int getParamsSize()
 
 int getInt()
 {
-
 	char buffer[100];
 	printf("< ");
 	char *s = fgets(buffer, sizeof(buffer), stdin);
@@ -1009,8 +1005,7 @@ int getInt()
 }
 
 float getReal()
-{
-	srand(time(NULL));
+{	
 	char buffer[100];
 	printf("< ");
 	char *s = fgets(buffer, sizeof(buffer), stdin);
@@ -1066,18 +1061,41 @@ void freeTree(ast_node *root)
 
 	}
 	
-	if(root->funcName)
-		free(root->funcName);
-	if(root->op)
-		free(root->op);
+	freeNode(root);
 
-	if(root->val.m_string)
-		free(root->val.m_string);
+}
+
+void freeNode(ast_node *node)
+{
+
+	if(node->funcName)
+	{
+
+		free(node->funcName);
+
+	}
+	if(node->op)
+	{
+
+		free(node->op);
+
+	}
+	if(node->val.m_string)
+	{
+
+		free(node->val.m_string);
+
+	}
+
+	if(node->val.m_id)
+	{
+
+		free(node->val.m_id);
 	
-	if(root->val.m_id)
-		free(root->val.m_id);
-//	printf("Deads: %d\n", deads);
-	free(root);
+	}
+
+	free(node);
+	node = NULL;
 
 }
 
@@ -1101,13 +1119,34 @@ value_t getReturnVal()
 
 int deleted = 0;
 
-void startOptimization(ast_node *node)
+void startOptimization(int argc, char **argv, ast_node *node)
 {
 
 	printf("Starting optimization\n");
-	constantFolding(node);
-	deadCodeElimination(NULL, 0, node);
-	printf("Eliminated %d blocks of dead code and %d operations were folded\n", deads, folds);
+	
+	for(int i = 0; i < argc; i++)
+	{
+		if(strcmp(argv[i], "-c") == 0)
+		{
+			printf("Constant Folding\n");
+			constantFolding(node);
+		}
+		if(strcmp(argv[i], "-d") == 0)
+		{
+			printf("Dead Code Elimination\n");
+			deadCodeElimination(NULL, 0, node);
+		}
+		if(strcmp(argv[i], "-r") == 0)
+		{
+			printf("Rearranging nodes\n");
+			reArrangeNodes(NULL, -1, node);
+		}
+	}
+
+	if(deads || folds || arranges)
+	{
+		printf("Eliminated %d blocks of dead code, %d operations were folded and %d nodes were rearranged\n", deads, folds, arranges);
+	}
 
 }
 	
@@ -1223,20 +1262,15 @@ void deadCodeElimination(ast_node *prev, int index, ast_node *node)
 			{
 
 				deadCodeElimination(node, 1, node->childNodes[1]);
+				deadCode = 0;				
 			
 			} else 
 			{
-
+//				printf("Going through old instructions\n");
 				deadCodeElimination(prev, index, prev->childNodes[index]);
 
 			}
 
-			if(deadCode)
-			{
-
-				deadCode = 0;
-
-			}
 			break;
 		}
 
@@ -1325,4 +1359,78 @@ void constantFolding(ast_node *node)
 		}
 
 	}
+}
+
+
+void reArrangeNodes(ast_node *prev, int index, ast_node *node)
+{
+	
+	if(node == NULL)
+	{
+
+		return;
+
+	}
+
+//	printf("Nodetype: %d\n", node->type);
+	switch(node->type)
+	{
+		case INSTRUCTIONS:
+		{
+			reArrangeNodes(node, 0, node->childNodes[0]);
+			reArrangeNodes(node, 1, node->childNodes[1]);
+			
+			if(node->childNodes[0] != NULL && node->childNodes[0]->type == INSTRUCTIONS && node->childNodes[1] == NULL)
+			{
+
+				//printf("Empty Instruction\n");
+				prev->childNodes[index] = node->childNodes[0];
+				freeNode(node);
+				arranges++;	
+		
+			}
+			break;
+		}
+
+		case FUNC:
+		{
+
+			reArrangeNodes(node, 1, node->childNodes[1]);
+			break;
+		
+		}
+
+		case FUNCS:
+		{
+
+			reArrangeNodes(node, 0, node->childNodes[0]);
+			reArrangeNodes(node, 1, node->childNodes[1]);
+			break;
+		}
+
+		case IF:
+		{
+
+			reArrangeNodes(node, 1, node->childNodes[1]);
+			break;
+		
+		}
+
+		case ELSE:
+		{
+
+			reArrangeNodes(node, 0, node->childNodes[0]);
+			break;
+		}
+
+		default:
+		{
+			
+			break;
+
+		}
+	
+	}
+
+
 }

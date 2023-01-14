@@ -30,6 +30,9 @@ typedef struct
 
 } identifier;
 
+int counter;
+char **flags;
+
 %}
 
 
@@ -102,7 +105,7 @@ typedef struct
 
 %%
 
-START: FUNCTIONS { startOptimization($1);  print($1); if(mainFunction){ execute(mainFunction);} else { printf("No main function detected\n"); } /*printf("Last dump\n"); var_dump();*/  freeAll($1); }
+START: FUNCTIONS { startOptimization(counter, flags, $1);  print($1); if(mainFunction){ execute(mainFunction);} else { printf("No main function detected\n"); } /*printf("Last dump\n"); var_dump();*/  freeAll($1); }
        | { printf("No input provided\n"); }
 
 FUNCTIONS: FUNCTIONS FUNCTION { /*printf("Creating funcs\n");*/ $$ = new_node(FUNCS); $$->childNodes[0] = $1; $$->childNodes[1] = $2; } 
@@ -211,6 +214,21 @@ FUNCPARAMS: FUNCPARAMS COMMA DECLARATION      { $$ = new_node(FUNCPARAMS); $$->c
 
 %%
 
+void setFlags(int argc, char **argv)
+{
+	
+	flags = NULL;
+	counter = 0;
+	if(argc > 2)
+	{
+
+		counter = argc - 2;
+		flags = argv + 2;
+	
+	}
+
+}
+
 int checkFileName(const char *fileName)
 {
 
@@ -232,11 +250,14 @@ int main(int argc, char **argv)
 	{
 		FILE *file = fopen(argv[1], "r");
 		yyin = file;
+		setFlags(argc, argv);
 		yyparse();
 		fclose(file);
 	} else {
-		fprintf(stderr, "This interpreter only handels frail files\n");
+		fprintf(stderr, "This interpreter only handels .frail files\n");
 	}
+	
+	
 
 	return 0;
 

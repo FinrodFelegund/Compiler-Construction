@@ -3,12 +3,13 @@ func test()
 
 	int a = 5;
 	
-	if(a < 6)
+	if(0)
 	{
 		print("Test");
 		print("\nl");
 	} else 
 	{ 
+		return;	
 		print("This doesnt work");
 		print("\nl");
 	}
@@ -17,11 +18,22 @@ func test()
 	print("\nl");
 
 }
+/*
+func test1()
+{
 
+	int a;
+	return;
+	int b;
+	int c;
+
+
+}
+*/
 
 func main()
 {
 	
 	test();
-
+//	test1();
 }

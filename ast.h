@@ -16,7 +16,6 @@ typedef enum node_types node_type;
 
 GVC_t *gvc;
 
-
 #define MAXCHILDREN 5
 struct ast_node {
 
@@ -38,6 +37,7 @@ void printTree(ast_node *root, Agraph_t *graph, Agnode_t *node);
 value_t execute(ast_node *root);
 void freeAll(ast_node *root);
 void freeTree(ast_node *root);
+void freeNode(ast_node *node);
 int checkScope(ast_node *root);
 char *getDataType(value_t val);
 
@@ -108,6 +108,9 @@ value_t getReturnVal();
 
 // --- OPTIMIZATION ---
 
-void startOptimization(ast_node *node);
+void startOptimization(int argc, char **argv, ast_node *node);
 void constantFolding(ast_node *node);
 void deadCodeElimination(ast_node *prev, int index, ast_node *node);
+void reArrangeNodes(ast_node *prev, int index, ast_node *node);
+
+// ---OPTIMIZATION ---
