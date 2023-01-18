@@ -1,39 +1,18 @@
-func test()
-{
-
-	int a = 5;
-	
-	if(0)
-	{
-		print("Test");
-		print("\nl");
-	} else 
-	{ 
-		return;	
-		print("This doesnt work");
-		print("\nl");
-	}
-
-	print("Hallo");
-	print("\nl");
-
-}
-/*
-func test1()
-{
-
-	int a;
-	return;
-	int b;
-	int c;
-
-
-}
-*/
-
 func main()
 {
 	
-	test();
-//	test1();
+	if(1 && 0)
+	{
+		print(5);
+		print("\nl");
+
+	}
+
+
+
+
+
+
+
+
 }

@@ -1,0 +1,141 @@
+func rule(int array [] a)
+{
+	int array [] b;
+	int i = 0;
+	int il = 0;
+	int ir = 0;
+	int index;
+	for(i = 0; i < 30; i++)
+	{
+
+		il = i - 1;
+		if(il < 0)
+		{
+			il = 0;
+
+		}
+	//	il = il % 30;
+	//	ir = i + 1;
+	//	ir = ir % 30;
+		ir = i + 1;
+		if(ir > 30)
+		{
+
+			ir = 30;
+
+		}
+	/*	print(il);
+		print(" ");
+		print(i);
+		print(" ");
+		print(ir);
+		print("\nl");*/
+		if((a[il] == 0) && (a[i] == 0) && (a[ir] == 0))
+		{
+	
+			index = 0;
+			b[i] = 0;
+		
+		}
+
+		if((a[il] == 0) && (a[i] == 0) && (a[ir] == 1))
+		{
+
+			index = 1;
+			b[i] = 1;
+
+		}
+
+		if((a[il] == 0) && (a[i] == 1) && (a[ir] == 0))
+		{
+
+			index = 2;
+			b[i] = 1;
+
+		}
+
+		if((a[il] == 0) && (a[i] == 1) && (a[ir] == 1))
+		{
+
+			index = 3;
+			b[i] = 1;
+
+		}
+		
+		
+		if((a[il] == 1) && (a[i] == 0) && (a[ir] == 0))
+		{
+
+			index = 4;
+			b[i] = 0;
+
+		}
+		
+		if((a[il] == 1) && (a[i] == 0) && (a[ir] == 1))
+		{
+
+			index = 5;
+			b[i] = 1;
+
+		}
+
+		if((a[il] == 1) && (a[i] == 1) && (a[ir] == 0))
+		{
+
+			index = 6;
+			b[i] = 1;
+
+		}
+
+		if((a[il] == 1) && (a[i] == 1) && (a[ir] == 1))
+		{
+
+			index = 7;
+			b[i] = 0;
+		
+		}
+	}
+//	print("\nl");
+//	print(b);
+//	print("\nl");
+
+	for(i = 0; i < 30; i++)
+	{
+
+		a[i] = b[i];
+	
+	}
+	
+	
+	return a;
+
+}
+
+func main()
+{
+
+	int i = 0;
+	int count = 0;
+	int array [] a;
+	a[30] = 0;
+	a[10] = 1;
+	a[25] = 1;
+	while(count < 15)
+	{
+		for(i = 0; i < 30; i++)
+		{
+			if(a[i] == 0)
+			{
+				print(" ");
+			}
+			if(a[i] == 1)
+			{
+				print(a[i]);
+			}
+		}
+		print("\nl");
+		a = rule(a);
+		count++;
+	}
+
+}

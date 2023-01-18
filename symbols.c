@@ -16,7 +16,7 @@ value_t createEmpty()
         val.scopeBorder = 0;
         val.empty = 0;
         val.m_intArray = createEmptyIntArray();
-	val.boolean = 1; 
+	val.boolean = -1; 
         return val;
  
 }
@@ -86,7 +86,7 @@ void leave_func()
 
 void enter_block()
 {
-
+//	printf("Entering block\n");
 	value_t val = createEmpty();
 	val.scopeBorder = block_border;
 	stack_push(val);
@@ -95,7 +95,7 @@ void enter_block()
 
 void leave_block()
 {
-
+//	printf("Leaving block\n");
 	int i = stack_l.used - 1;
 	for(; i >= 0; i--)
 	{
@@ -115,14 +115,23 @@ value_t *lookUp(char *id)
 	int i = stack_l.used - 1;
 	for(; i >= 0; i--)
 	{
-		if(stack_l.vals[i].scopeBorder == 1)
+//		printf("Stack pos: %d:%s:%s\n", i, id, stack_l.vals[i].m_id);
+		if(stack_l.vals[i].scopeBorder == func_border)
+		{
+			break;
+		}
+
+		if(stack_l.vals[i].scopeBorder == block_border)
 		{
 
-			return NULL;
-
+			continue;
+		
 		}
+
 		if(strcmp(stack_l.vals[i].m_id, id) == 0)
+		{
 			return &stack_l.vals[i];
+		}
 
 	}
 
@@ -157,9 +166,25 @@ void var_set(value_t val, char *id)
 		switch(val.m_flag)
 		{
 
-			case intType: v->m_int = val.m_int; break;
-			case realType: v->m_real = val.m_real; break;
-			case stringType: v->m_string = (val.m_string); break;
+			case intType: 
+			{
+				v->m_int = val.m_int; 
+				v->boolean = val.m_int != 0;
+				break;
+			}
+			case realType: 
+			{
+				v->m_real = val.m_real; 
+				v->boolean = val.m_real != 0;
+				break;
+			}
+
+			case stringType: 
+			{
+				v->m_string = (val.m_string); 
+				v->boolean = strlen(val.m_string) != 0;
+				break;
+			}
 			case intArrayType: v->m_intArray = val.m_intArray; break;
 		}
 	}
@@ -168,7 +193,6 @@ void var_set(value_t val, char *id)
 
 value_t var_get(char *id)
 {
-
 	value_t *val = lookUp(id);
 	if(val)
 	{
@@ -189,12 +213,18 @@ void var_dump()
 	int i = stack_l.used - 1;
 	for(; i >= 0; i--)
 	{
-		if(stack_l.vals[i].scopeBorder)
+		if(stack_l.vals[i].scopeBorder == 1)
 		{
 
-			printf("%d: End of function\n", i);
+			printf("%d: End of function: %d\n", i, stack_l.vals[i].scopeBorder);
 		
-		} else  
+		} else if(stack_l.vals[i].scopeBorder == 2)
+		{
+
+			printf("%d: End of block: %d\n", i, stack_l.vals[i].scopeBorder);
+
+		} 
+		else  
 		{
 			printf("%d: ", i);
 			printVariable(stack_l.vals[i]);
@@ -274,7 +304,8 @@ void freeStack()
 
 
 void pushIntArray(intArray *arr, int pos, int val)
-{
+{	
+//	printf("%d : %d\n", pos, val);
 	if(arr->size == 0)
 	{
 		arr->size = 1;
@@ -308,10 +339,17 @@ void pushIntArray(intArray *arr, int pos, int val)
 
 int lookUpIntArray(intArray *arr, int pos)
 {
-
+//	printf("%d \n", pos);
 	if(arr->size <= pos)
 	{
+		if(arr->size == 0)
+		{
 
+			arr->size = 1;
+			arr->array = realloc(arr->array, sizeof(int));
+			arr->array[0] = 0;
+
+		}
 		return arr->array[arr->size - 1];
 
 	}
