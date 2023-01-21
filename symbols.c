@@ -17,6 +17,7 @@ value_t createEmpty()
         val.empty = 0;
         val.m_intArray = createEmptyIntArray();
 	val.boolean = -1; 
+	val.constqual = 0;
         return val;
  
 }
@@ -181,11 +182,22 @@ void var_set(value_t val, char *id)
 
 			case stringType: 
 			{
-				v->m_string = (val.m_string); 
+			//	if(v->m_string) { free(v->m_string); v->m_string = NULL; }
+				v->m_string = strdup(val.m_string); 
 				v->boolean = strlen(val.m_string) != 0;
 				break;
 			}
-			case intArrayType: v->m_intArray = val.m_intArray; break;
+			case intArrayType: 
+			{
+				if(v->m_intArray.array)
+				{
+
+			//		free(v->m_intArray.array);
+					v->m_intArray.array = NULL;
+
+				}
+				v->m_intArray = val.m_intArray; break;
+			}
 		}
 	}
 

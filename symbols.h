@@ -26,6 +26,7 @@ typedef struct
 	int scopeBorder;
 	int empty;
 	int boolean;
+	int constqual;
 
 } value_t;
 

@@ -61,3 +61,14 @@ dkms.conf
 # other
 *.swp
 *.png
+
+# latex
+*.bib
+*.aux
+*.bbl
+*.blg
+*.log
+*.pdf
+*.xml
+*.gz
+*.toc

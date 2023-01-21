@@ -48,11 +48,13 @@ char **flags;
 };
 
 %token <sconst> _str
+       <iconst> _CONST
        <iconst> _int
        <rconst> _real
        <sconst> _id
 
-%token  _RETURN
+%token	DOUBLEP
+	_RETURN
 	_FOR
 	_NOTEQU
 	_EQU
@@ -123,7 +125,24 @@ INSTRUCTIONS:  INSTRUCTIONS EXPRESSION    { $$ = new_node(INSTRUCTIONS); $$->chi
 CONTROLL: _IF LPAREN LOGICAL RPAREN LCURLI INSTRUCTIONS RCURLI OPTIONAL_ELSE { $$ = new_node(IF); $$->childNodes[0] = $3; $$->childNodes[1] = $6; $$->childNodes[2] = $8; }
          | _WHILE LPAREN LOGICAL RPAREN LCURLI INSTRUCTIONS RCURLI            { $$ = new_node(WHILE); $$->childNodes[0] = $3; $$->childNodes[1] = $6; }
 	 | _FOR LPAREN DEFINITION SEMI LOGICAL SEMI INCDEC RPAREN LCURLI INSTRUCTIONS RCURLI { $$ = new_node(FOR); $$->childNodes[0] = $3; $$->childNodes[1] = $5; $$->childNodes[2] = $7; $$->childNodes[3] = $10; }
-
+	 | _FOR LPAREN DECLARATION DOUBLEP _id RPAREN LCURLI INSTRUCTIONS RCURLI 
+		{
+			$$ = new_node(RANGE_FOR);
+		
+			$$->childNodes[0] = $3;
+			$$->childNodes[1] = new_node(DECLARATION); $$->childNodes[1]->val.m_flag = intType; $$->childNodes[1]->val.m_id = strdup("begin");
+			$$->childNodes[2] = new_node(LOGICAL); $$->childNodes[2]->childNodes[0] = new_node(ID); $$->childNodes[2]->childNodes[0]->val.m_flag = intType; $$->childNodes[2]->childNodes[0]->val.m_id = strdup("begin");
+			$$->childNodes[2]->childNodes[1] = new_node(ID); $$->childNodes[2]->childNodes[1]->val.m_id = strdup($5); $$->childNodes[2]->childNodes[1]->val.m_flag = intType;
+			$$->childNodes[2]->op = strdup("!=");
+			$$->childNodes[3] = new_node(INCDEC); $$->childNodes[3]->childNodes[0] = new_node(ID); $$->childNodes[3]->childNodes[0]->val.m_flag = intType; $$->childNodes[3]->childNodes[0]->val.m_id = strdup("begin");
+			$$->childNodes[3]->op = strdup("++");
+			$$->childNodes[4] = new_node(DEFINITION); 
+			$$->childNodes[4]->childNodes[0] = new_node(ID); $$->childNodes[4]->childNodes[0]->val.m_flag = intType; $$->childNodes[4]->childNodes[0]->val.m_id = strdup($3->val.m_id); 
+			$$->childNodes[4]->childNodes[1] = new_node(ARR_ID); $$->childNodes[4]->childNodes[1]->val.m_id = strdup($5); $$->childNodes[4]->childNodes[1]->childNodes[0] = new_node(ID); 
+			$$->childNodes[4]->childNodes[1]->childNodes[0]->val.m_id = strdup("begin"); 
+			$$->childNodes[4]->childNodes[1]->childNodes[0]->val.m_flag = intType;
+			$$->childNodes[5] = $8;
+		}
 
 OPTIONAL_ELSE: _ELSE LCURLI INSTRUCTIONS RCURLI { $$ = new_node(ELSE); $$->childNodes[0] = $3; }
 	     | { $$ = NULL; }
@@ -184,12 +203,13 @@ CONSTANT:   _int                 { $$ = new_node(INT); $$->val.m_int = $1; $$->v
           | _str                 { $$ = new_node(STRING); $$->val.m_string = strdup($1); $$->val.m_flag = stringType; $$->val.boolean = strlen($1) != 0; } 
 	 	
 
-VARIABLE:   _id                         { $$ = new_node(ID); $$->val.m_id = $1; }
+VARIABLE:   _id                         { $$ = new_node(ID); $$->val.m_id = strdup($1); }
 	 | _id LBRAC ARITHMETIC RBRAC       { $$ = new_node(ARR_ID); $$->val.m_id = strdup($1); $$->childNodes[0] = $3; }
 
 
-DECLARATION: TYPE _id                   { $$ = new_node(DECLARATION); $$->val.m_id = $2; $$->val.m_flag = $1; } 
+DECLARATION:  TYPE _id                   { $$ = new_node(DECLARATION); $$->val.m_id = strdup($2); $$->val.m_flag = $1; } 
 //	    | ARRAY_DECLARATION
+
 
 
 	      

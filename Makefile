@@ -22,5 +22,5 @@ lexer.yy.c: lexer.l
 lexer.yy.o: lexer.yy.c parser.tab.h
  
 clean:
-	rm -rf symbols.o ast.o parser.tab.* lexer.yy.* exec parser.output out.png
+	rm -rf symbols.o ast.o parser.tab.* lexer.yy.* exec parser.output out.png PDF/*.bib PDF/*.aux PDF/*.blg PDF/*.log PDF/*.pdf PDF/*.xml PDF/*.gz PDF/*.toc PDF/*.out PDF/*.bbl
 

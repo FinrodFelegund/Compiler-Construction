@@ -127,6 +127,7 @@ REAL "0"|[0-9]+"."[0-9]+
 "else"    { return _ELSE; }
 "while"   { return _WHILE; }
 "for"     { return _FOR; }
+"const"   { return _CONST; }
 "+"       { return PLUOP; }
 "-"       { return MINOP; }
 "*"       { return MULOP; }
@@ -154,6 +155,7 @@ REAL "0"|[0-9]+"."[0-9]+
 ";"       { return SEMI; }
 "="       { return ASS; }
 ","       { return COMMA; }
+":"       { return DOUBLEP; }
 
 "getInt"  { return _GETINT; }
 "getReal" { return _GETREAL; }

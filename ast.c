@@ -98,10 +98,11 @@ void printTree(ast_node *root, Agraph_t *graph, Agnode_t *node)
 		case GETRAND: name = concatenateString("GETRAND", ""); break;
 		case RETURN: name = concatenateString("RETURN", ""); break;
 		case ARR_ID: name = concatenateString("ARRAY ID", ""); break;
+		case RANGE_FOR: name = concatenateString("RANGE FOR", ""); break;
 		default: name = "Unknown Node";printf("Unknown node in printing\n"); return; 
 	}
 
-	//printf("%s\n", name);	
+//	printf("%s\n", name);	
 	char buffer[10];
 	sprintf(buffer, "%d", nodeCounter++);	
 	Agnode_t *n = agnode(graph, buffer, 1);
@@ -129,7 +130,7 @@ value_t execute(ast_node *root)
 	value_t val = createEmpty();
 	if(root != NULL)
 	{	
-	//printf("Node type: %d %d\n",l++, root->type);
+//	printf("Node type: %d %d\n",l++, root->type);
 		switch(root->type)
 		{
 			case INSTRUCTIONS: 
@@ -171,6 +172,33 @@ value_t execute(ast_node *root)
 					}
 				} 
 				break;
+			}
+
+			case RANGE_FOR:
+			{
+
+				execute(root->childNodes[0]);
+				execute(root->childNodes[1]);
+				val = execute(root->childNodes[2]);
+				if(val.boolean)
+				{
+
+					while(val.boolean)
+					{
+
+						enter_block();
+						execute(root->childNodes[4]);
+						execute(root->childNodes[5]);
+						execute(root->childNodes[3]);
+						val = execute(root->childNodes[2]);
+					//	var_dump();
+						leave_block();						
+
+					}
+
+				}
+				break;
+	
 			}
 
 			case FUNC: 
@@ -231,9 +259,12 @@ value_t execute(ast_node *root)
 			case ARR_ID: 
 			{ 
 				val = var_get(root->val.m_id); value_t tmp = execute(root->childNodes[0]); if(tmp.m_flag != intType) { fprintf(stderr, "Index has to be of type int"); exit(1); }
-				val.m_intArray.current = tmp.m_int; return val;
+				val.m_intArray.current = tmp.m_int; 
+//				printf("%s %s\n", val.m_id, tmp.m_id);
+				return val;
 				     
 			}
+
 			default: printf("Unknown Node in executing\n"); break;
 
 		}
@@ -509,8 +540,16 @@ value_t arithmeticOperation(char *op, value_t op1, value_t op2)
 
 value_t assignement(value_t dest, value_t source)
 {
-
+	
 	value_t val = createEmpty();
+
+	if(dest.constqual)
+	{
+
+		fprintf(stderr, "Assigning to const qualified ID is illegal\n");
+		exit(1);
+
+	}
 
 	if(dest.m_flag == intArrayType && source.m_flag == intType)
 	{		
@@ -647,7 +686,27 @@ value_t determineLogical(char *op, value_t op1, value_t op2)
 	value_t val = createEmpty();
 
 	if(op1.m_flag == intType && op2.m_flag == intArrayType)
-	{
+	{	
+
+		if(op2.m_intArray.current == -1)
+		{
+			if(strcmp(op, "!=") == 0)
+			{
+//				printf("%s %d : %s %d\n", op1.m_id, op1.m_int, op2.m_id, op2.m_intArray.size);
+				val.m_flag = intType;
+				val.m_int = op1.m_int != op2.m_intArray.size;
+				val.boolean = op1.m_int != op2.m_intArray.size;
+				return val;
+
+			} else 
+			{
+			
+				fprintf(stderr, "No operations between integer type and integer array type allowed\n");
+				exit(1);
+			}
+		}
+
+
 		val.m_flag = intType;
 		int tmp = lookUpIntArray(&op2.m_intArray, op2.m_intArray.current);
 		if(strcmp(op, "<") == 0)
@@ -707,7 +766,15 @@ value_t determineLogical(char *op, value_t op1, value_t op2)
 	}
 	
 	if((op1.m_flag == intArrayType) && (op2.m_flag == intType))
-        {
+        {	
+		if(op1.m_intArray.current == -1)
+		{
+
+			fprintf(stderr, "No operations between integer type and integer array type allowed\n");
+			exit(1);
+		}
+
+
                  val.m_flag = intType;
                  int tmp = lookUpIntArray(&op1.m_intArray, op1.m_intArray.current);
                  if(strcmp(op, "<") == 0)
