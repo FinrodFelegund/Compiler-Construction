@@ -96,8 +96,8 @@ func main()
 {
 	
 
-
-	int i = 9;
+	print("Provide the index of the nth fibonnaci number\nl");
+	int i = getInt();
 	print(fib(i));
 	print("\nl");
 	multTable();

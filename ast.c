@@ -1368,7 +1368,7 @@ void startOptimization(int argc, char **argv, ast_node *node)
 	} else
 	{
 
-		printf("No optimization specified\n");
+		printf("No optimization specified - optimizations can be specified with the flags -c (Constant folding) -d (Dead code elimination) -r (Rearranging nodes)\n");
 	
 	}
 
